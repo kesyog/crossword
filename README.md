@@ -35,10 +35,28 @@ so there's some survivorship bias. Again, this only affects the early data.
 
 ## Scraping the data
 
-Thanks to fun [licensing issues](https://opensource.google/docs/), I can't (yet) share the actual
-code used to scrape or plot the data, but there's not much to it beyond hitting some REST APIs and
-then figuring out what data to plot. If you choose to replicate this, be nice, use reasonable rate
-limits, etc. I'm not responsible for anything that happens to your account.
+This repo contains a Rust crate that scrapes data from the NYT's servers. To use it, install [Rust](https://rustup.rs)
+and then run the following to generate a CSV file containing the data:
+
+```sh
+NYT_S=<your token> NYT_XWORD_START=YYYY-MM-DD cargo run --release
+```
+
+Environment variable definitions:
+* `NYT_S` is your subscription token (see below).
+* `NYT_XWORD_START` is the earliest date to start searching from.
+* `NYT_REQUESTS_PER_SEC` (optional) rate limit for requests
+
+By default, the program will limit requests to 5 per second in an attempt to avoid spamming the NYT's servers.
+While you can choose to override that limit to speed up the search, be nice and use something reasonable.
+This is meant to be a one-off script so it's better to just err on the side of being slow.
+Regardless of what you choose, I'm not responsible for anything that happens to your account.
+
+### Under the hood
+
+The script hits some undocumented but public REST APIs to scrape data. These APIs can be found by using the included set of developer tools in Chrome or Firefox to peek at HTTP traffic while browsing the crossword webpage.
+
+Some details if you want to bypass the script and replicate the functionality yourself:
 
 1. Each puzzle is assigned a numerical id. Before we can fetch the stats for a given puzzle, we need
 to know that id. To find it, send a GET request as below, specifying `{start_date}` and `{end_date}`
@@ -64,7 +82,18 @@ when the puzzle was solved, and whether any assists were used.
 
 5. Rinse and repeat, collecting data for the dates of interest.
 
+## Plotting the data
+
+Use your favorite tools to analyze and plot the raw data stored in the CSV file. The Python-pandas-matplotlib trifecta
+works great.
+
+TODO: add my plotting code
+
 ## References
 
 * [Relevant Reddit post](https://www.reddit.com/r/crossword/comments/dqtnca/my_automatic_nyt_crossword_downloading_script): for figuring out how to find the right APIs to hit
 * [Rex Parker does the NY Times crossword](https://rexwordpuzzle.blogspot.com): grumpy old man
+
+## Disclaimer
+
+This is not an officially supported Google product
