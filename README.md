@@ -87,7 +87,11 @@ when the puzzle was solved, and whether any assists were used.
 Use your favorite tools to analyze and plot the raw data stored in the CSV file. The Python-pandas-matplotlib trifecta
 works great.
 
-TODO: add my plotting code
+## TODO
+
+* Add plotting code
+* Allow caching of results so that the script can be run regularly
+* Run script regularly
 
 ## References
 
