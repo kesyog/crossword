@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::logger::PuzzleStats;
 use anyhow::Result;
 use chrono::naive::NaiveDate;
 use core::num::NonZeroU32;
@@ -20,12 +19,13 @@ use governor::clock::DefaultClock;
 use governor::state::direct::NotKeyed;
 use governor::state::InMemoryState;
 use governor::{Quota, RateLimiter};
+use log::error;
 use reqwest::header::{self, HeaderMap};
 use reqwest::IntoUrl;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use std::time;
 
 #[derive(Debug, Clone, Hash, PartialEq, Deserialize)]
 struct PuzzleInfoResponse {
@@ -60,7 +60,12 @@ impl PuzzleStatsResponse {
         }
 
         if let Some(true) = self.calcs.solved {
-            stats.solve_time = self.calcs.seconds_spent_solving.unwrap();
+            stats.solve_time = if let Some(solve_time) = self.calcs.seconds_spent_solving {
+                solve_time
+            } else {
+                error!("Response for solved puzzle did not contain solve time");
+                return None;
+            };
             Some(stats)
         } else {
             None
@@ -103,15 +108,14 @@ impl RateLimitedClient {
     const PUZZLE_INFO_ENDPOINT: &'static str =
         "/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}";
     const PUZZLE_STATS_ENDPOINT: &'static str = "/v6/game/{id}.json";
-    /// Default rate limit in requests per second
-    pub const DEFAULT_REQUEST_QUOTA: u32 = 5;
 
     /// Construct a new `RateLimitedClient`
     ///
-    /// Assumes that the NYT subscription token is provided via the `NYT_S` environment variable.
-    /// The default rate limit can be overwritten by setting `NYT_REQUESTS_PER_SEC`
-    pub fn new() -> Self {
-        let nyt_s = dotenv::var("NYT_S").expect("Could not find NYT_S env variable");
+    /// # Arguments
+    ///
+    /// * `nyt_s` - NYT subscription token extracted from web browser
+    /// * `quota` - Outgoing request quota in requests per second
+    pub fn new(nyt_s: &str, quota: NonZeroU32) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("nyt-s", nyt_s.parse().unwrap());
         headers.insert(header::ACCEPT, "application/json".parse().unwrap());
@@ -120,16 +124,11 @@ impl RateLimitedClient {
         let client = reqwest::ClientBuilder::new()
             .user_agent("Scraping personal stats")
             .default_headers(headers)
+            .timeout(time::Duration::from_secs(10))
             .build()
             .unwrap();
+        let governor = Arc::new(RateLimiter::direct(Quota::per_second(quota)));
 
-        let quota: u32 = dotenv::var("NYT_REQUESTS_PER_SEC")
-            .ok()
-            .and_then(|quota| quota.parse::<u32>().ok())
-            .unwrap_or(Self::DEFAULT_REQUEST_QUOTA);
-        let governor = Arc::new(RateLimiter::direct(Quota::per_second(
-            NonZeroU32::new(quota).expect("Rate limit cannot be zero"),
-        )));
         Self { client, governor }
     }
 
@@ -147,7 +146,7 @@ impl RateLimitedClient {
     /// further query for solve stats.
     ///
     /// Returns a `HashMap` mapping `NaiveDate` dates to `u32` ids.
-    async fn get_puzzle_ids(
+    pub async fn get_puzzle_ids(
         &self,
         start: NaiveDate,
         end: NaiveDate,
@@ -168,43 +167,10 @@ impl RateLimitedClient {
     ///
     /// Returns a `Result` containing the statistics. If the provided `Option` is `None`, the puzzle
     /// was either unsolved or solved with aid.
-    async fn get_solve_stats(&self, puzzle_id: u32) -> Result<Option<SolvedPuzzleStats>> {
+    pub async fn get_solve_stats(&self, puzzle_id: u32) -> Result<Option<SolvedPuzzleStats>> {
         let endpoint = Self::PUZZLE_STATS_ENDPOINT.replace("{id}", &puzzle_id.to_string());
         let url = Self::api_url(&endpoint);
         let response: PuzzleStatsResponse = self.get(&url).await?.json().await?;
         Ok(response.collect_stats())
-    }
-
-    /// Search crosswords within the provided date range and send the results to the provided
-    /// channel
-    pub async fn search_dates(
-        &self,
-        start: NaiveDate,
-        end: NaiveDate,
-        logger: mpsc::UnboundedSender<crate::logger::Payload>,
-    ) -> Result<()> {
-        let id_map = match self.get_puzzle_ids(start, end).await {
-            Ok(map) => map,
-            Err(e) => {
-                eprintln!("Couldn't get puzzle id for {} {}: {:?}", start, end, e);
-                return Ok(());
-            }
-        };
-        for (&date, &id) in &id_map {
-            match self.get_solve_stats(id).await {
-                Ok(Some(solve_stats)) => {
-                    logger.send(crate::logger::Payload::Solve(PuzzleStats::new(
-                        date,
-                        solve_stats,
-                    )))?;
-                }
-                Ok(None) => logger.send(crate::logger::Payload::Unsolved)?,
-                Err(e) => {
-                    eprintln!("Error: {} {}: {:?}", date, id, e);
-                    logger.send(crate::logger::Payload::FetchError)?;
-                }
-            }
-        }
-        Ok(())
     }
 }

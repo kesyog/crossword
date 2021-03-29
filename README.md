@@ -42,22 +42,30 @@ This repo contains a Rust crate that scrapes data from the NYT's servers. To use
 and then run the following to generate a CSV file containing the data:
 
 ```sh
-NYT_S=<your token> NYT_XWORD_START=YYYY-MM-DD cargo run --release
+# See help screen
+$ cargo run --release -- --help
+
+# Example usage starting search from the crossword on January 1, 2016 onward
+$ cargo run --release -- -t <your NYT token> -s 2016-01-01 -o data.csv
+
+# Example usage using cached data from a previous run to reduce the number of new requests made
+$ cargo run --release -- -t <your NYT token> -s 2016-01-01 -c old_data.csv -o new_data.csv
+
+# Example usage with increased quota to speed up rate-limiting by a factor of 2
+$ cargo run --release -- -t <your NYT token> -s 2016-01-01 -q 10 -o data.csv
 ```
 
-Environment variable definitions:
-* `NYT_S` is your subscription token (see below).
-* `NYT_XWORD_START` is the earliest date to start searching from.
-* `NYT_REQUESTS_PER_SEC` (optional) rate limit for requests
+The NYT subscription token must be extracted via your browser (see below).
 
-By default, the program will limit requests to 5 per second in an attempt to avoid spamming the NYT's servers.
+The program will fetch results concurrently, but by default, requests are limited to 5 per second in an attempt to avoid spamming the NYT's servers.
 While you can choose to override that limit to speed up the search, be nice and use something reasonable.
-This is meant to be a one-off script so it's better to just err on the side of being slow.
-Regardless of what you choose, I'm not responsible for anything that happens to your account.
+There shouldn't be any need to run this script very often so it's better to just err on the side of being slow.
+Regardless of the setting you use, default or not, I'm not responsible for anything that happens to your account.
 
 ### Under the hood
 
-The script hits some undocumented but public REST APIs to scrape data. These APIs can be found by using the included set of developer tools in Chrome or Firefox to peek at HTTP traffic while browsing the crossword webpage.
+The script scrapes data using some undocumented but public REST APIs used by the official NYT crossword webpage.
+The APIs can be found by using the included set of developer tools in Chrome or Firefox to peek at HTTP traffic while browsing the crossword webpage.
 
 Some details if you want to bypass the script and replicate the functionality yourself:
 
@@ -93,7 +101,6 @@ works great.
 ## TODO
 
 * Add plotting code
-* Allow caching of results so that the script can be run regularly
 * Run script regularly
 
 ## References

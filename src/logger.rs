@@ -12,36 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::api_client::SolvedPuzzleStats;
+use crate::database::{Database, PuzzleStats};
 use anyhow::Result;
-use chrono::{naive::NaiveDate, Datelike, Weekday};
 use indicatif::ProgressBar;
-use serde::Serialize;
 use tokio::sync::mpsc;
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Serialize)]
-pub struct PuzzleStats {
-    date: NaiveDate,
-    weekday: Weekday,
-    // It would be nice to embed SolvedPuzzleStats here, but serde's flatten attribute doesn't play
-    // well with the csv crate
-    solve_time_secs: u32,
-    opened_unix: Option<u32>,
-    solved_unix: Option<u32>,
-}
-
-impl PuzzleStats {
-    pub fn new(date: NaiveDate, solve_stats: SolvedPuzzleStats) -> Self {
-        let weekday = date.weekday();
-        Self {
-            date,
-            weekday,
-            solve_time_secs: solve_stats.solve_time,
-            opened_unix: solve_stats.opened,
-            solved_unix: solve_stats.solved,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq)]
 pub enum Payload {
@@ -53,18 +27,17 @@ pub enum Payload {
 
 pub async fn task_fn(
     mut rx: mpsc::UnboundedReceiver<Payload>,
+    mut stats_db: Database,
     progress: ProgressBar,
 ) -> Result<()> {
-    // The csv crate's Writer will add a header row using struct fieldnames by default
-    let mut writer = csv::Writer::from_path("xword.csv")?;
     while let Some(payload) = rx.recv().await {
         match payload {
-            Payload::Solve(stats) => writer.serialize(stats).expect("Serialization error"),
+            Payload::Solve(stats) => stats_db.add(stats),
             Payload::Finished => {
                 progress.finish_with_message("All done 🎉");
                 break;
             }
-            _ => (),
+            Payload::Unsolved | Payload::FetchError => (),
         }
         progress.inc(1);
     }
