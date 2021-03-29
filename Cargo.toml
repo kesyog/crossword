@@ -15,6 +15,13 @@ dotenv = "0.15"
 futures = "0.3.12"
 governor = "0.3.2"
 indicatif = { version = "0.15.0", features = ["improved_unicode"] }
+log = "0.4.14"
+pretty_env_logger = "0.4.0"
 reqwest = { version = "0.11", features = ["rustls-tls", "json", "gzip", "brotli"] }
 serde = { version = "1.0", features = ["derive"] }
+structopt = "0.3.21"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+
+[profile.release]
+lto = "thin"
+panic = "abort"
