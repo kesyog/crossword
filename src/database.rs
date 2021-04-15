@@ -11,23 +11,27 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize, Serialize)]
 pub struct PuzzleStats {
     pub date: NaiveDate,
+    /// id used to identify a puzzle to NYT server
+    /// TODO: consider removing Option wrapper once database has been fully updated with ids
+    puzzle_id: Option<u32>,
     weekday: Weekday,
     // It would be nice to embed SolvedPuzzleStats here, but serde's flatten attribute doesn't play
     // well with the csv crate
-    solve_time_secs: u32,
+    solve_time_secs: Option<u32>,
     opened_unix: Option<u32>,
     solved_unix: Option<u32>,
 }
 
 impl PuzzleStats {
-    pub fn new(date: NaiveDate, solve_stats: SolvedPuzzleStats) -> Self {
+    pub fn new(date: NaiveDate, id: u32, solve_stats: Option<SolvedPuzzleStats>) -> Self {
         let weekday = date.weekday();
         Self {
             date,
+            puzzle_id: Some(id),
             weekday,
-            solve_time_secs: solve_stats.solve_time,
-            opened_unix: solve_stats.opened,
-            solved_unix: solve_stats.solved,
+            solve_time_secs: solve_stats.map(|s| s.solve_time),
+            opened_unix: solve_stats.and_then(|s| s.opened),
+            solved_unix: solve_stats.and_then(|s| s.solved),
         }
     }
 }
