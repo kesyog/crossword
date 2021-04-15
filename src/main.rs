@@ -176,13 +176,17 @@ async fn search_date_block(
             async move {
                 match client.get_solve_stats(id).await {
                     Ok(Some(solve_stats)) => {
+                        let stats = PuzzleStats::new(date, id, Some(solve_stats));
                         logger
-                            .send(logger::Payload::Solve(PuzzleStats::new(date, solve_stats)))
+                            .send(logger::Payload::Solve(stats))
                             .expect("Failed to send result to channel");
                     }
-                    Ok(None) => logger
-                        .send(logger::Payload::Unsolved)
-                        .expect("Failed to send result to channel"),
+                    Ok(None) => {
+                        let stats = PuzzleStats::new(date, id, None);
+                        logger
+                            .send(logger::Payload::Unsolved(stats))
+                            .expect("Failed to send result to channel");
+                    }
                     Err(e) => {
                         error!("Failed to get stats for date={} id={}: {}", date, id, e);
                         logger
