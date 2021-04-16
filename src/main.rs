@@ -92,10 +92,10 @@ async fn main() -> Result<()> {
     let logger_handle = tokio::spawn(logger::task_fn(rx, stats_db, progress));
 
     let client = RateLimitedClient::new(&opt.nyt_token, opt.request_quota);
-    if let Err(e) = fetch_stats(client, search_space, tx.clone()).await {
+    if let Err(e) = fetch_stats(client.clone(), search_space, tx.clone()).await {
         error!("fetch_stats returned error: {}", e);
     };
-    tx.send(logger::Payload::Finished)?;
+    tx.send(logger::Payload::Finished(client.n_requests()))?;
     logger_handle.await??;
     Ok(())
 }
