@@ -52,13 +52,10 @@ struct Opt {
     )]
     request_quota: NonZeroU32,
 
-    /// Path to data from a previous program run ot use as a cache. If provided, results will only
-    /// be fetched for puzzles that aren't already in the cache.
-    #[structopt(short = "c", long = "cache")]
-    input_file: Option<PathBuf>,
-
-    /// Path to write CSV output. Can be the same as `input_file`
-    output_file: PathBuf,
+    /// Path to write CSV output. If a CSV file from a previous program exists at that path, it
+    /// will be updated with missing data and the number of requests made will potentially be
+    /// reduced.
+    db_path: PathBuf,
 }
 
 #[tokio::main]
@@ -68,9 +65,10 @@ async fn main() -> Result<()> {
     let opt = Opt::from_args();
 
     let today = chrono::offset::Utc::today().naive_utc();
-    let stats_db = match opt.input_file {
-        Some(input) => Database::from_file(input, &opt.output_file).unwrap(),
-        None => Database::new(&opt.output_file),
+    let stats_db = if opt.db_path.exists() {
+        Database::from_file(opt.db_path).unwrap()
+    } else {
+        Database::new(opt.db_path)
     };
     let search_space = stats_db.search_space(opt.start_date, today, DAY_STEP);
 

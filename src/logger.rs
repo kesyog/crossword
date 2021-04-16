@@ -34,6 +34,7 @@ pub async fn task_fn(
         match payload {
             Payload::Solve(stats) | Payload::Unsolved(stats) => stats_db.add(stats),
             Payload::Finished(n_requests) => {
+                stats_db.flush()?;
                 let msg = format!("🎉 All done after {} requests", n_requests);
                 progress.finish_with_message(&msg);
                 break;

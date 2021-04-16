@@ -6,7 +6,7 @@ use std::cmp;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize, Serialize)]
 pub struct PuzzleStats {
@@ -39,31 +39,25 @@ impl PuzzleStats {
 #[derive(Debug)]
 pub struct Database {
     records: Vec<PuzzleStats>,
-    // The csv crate's Writer will add a header row using struct fieldnames by default
-    writer: Option<csv::Writer<File>>,
+    filepath: PathBuf,
 }
 
 impl Database {
-    pub fn new<T: AsRef<Path>>(output: T) -> Self {
+    pub fn new<T: Into<PathBuf>>(out_path: T) -> Self {
         Self {
             records: Vec::new(),
-            writer: Some(csv::Writer::from_path(output).unwrap()),
+            filepath: out_path.into(),
         }
     }
 
-    pub fn from_file<T: AsRef<Path>, U: AsRef<Path>>(input: T, output: U) -> Result<Self> {
-        let input = input.as_ref();
-        let file = File::open(input)
-            .with_context(|| format!("Failed to open {}", input.to_str().unwrap()))?;
+    pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self> {
+        let path = path.as_ref();
+        let file = File::open(path)
+            .with_context(|| format!("Failed to open {}", path.to_str().unwrap()))?;
         let records = deserialize_records(file)?;
-        let mut writer = csv::Writer::from_path(output)?;
-        for record in &records {
-            writer.serialize(record)?;
-        }
-        writer.flush().expect("Flush error");
         Ok(Self {
             records,
-            writer: Some(writer),
+            filepath: path.to_path_buf(),
         })
     }
 
@@ -102,10 +96,20 @@ impl Database {
     }
 
     pub fn add(&mut self, puzzle: PuzzleStats) {
-        if let Some(writer) = self.writer.as_mut() {
-            writer.serialize(puzzle).expect("Serialization error");
-        }
         self.records.push(puzzle);
+    }
+
+    /// Write database to file
+    pub fn flush(&self) -> Result<()> {
+        let mut writer = csv::Writer::from_path(&self.filepath)?;
+        let mut sorted = self.records.clone();
+        sorted.sort_unstable_by_key(|s| s.date);
+
+        // The csv crate's Writer will add a header row using struct fieldnames by default
+        for record in sorted {
+            writer.serialize(record)?;
+        }
+        Ok(())
     }
 }
 
