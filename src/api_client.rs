@@ -24,6 +24,7 @@ use reqwest::header::{self, HeaderMap};
 use reqwest::IntoUrl;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time;
 
@@ -101,6 +102,7 @@ pub struct SolvedPuzzleStats {
 pub struct RateLimitedClient {
     client: reqwest::Client,
     governor: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
+    n_requests: Arc<AtomicU32>,
 }
 
 impl RateLimitedClient {
@@ -128,18 +130,30 @@ impl RateLimitedClient {
             .build()
             .unwrap();
         let governor = Arc::new(RateLimiter::direct(Quota::per_second(quota)));
+        let n_requests = Arc::new(AtomicU32::new(0));
 
-        Self { client, governor }
+        Self {
+            client,
+            governor,
+            n_requests,
+        }
     }
 
     /// Make a rate-limited GET request
     async fn get<T: IntoUrl + Send>(&self, url: T) -> reqwest::Result<reqwest::Response> {
         self.governor.until_ready().await;
+        self.n_requests.fetch_add(1, Ordering::Relaxed);
         self.client.get(url).send().await
     }
 
     fn api_url(endpoint: &str) -> String {
         [Self::API_BASE, endpoint].join("")
+    }
+
+    /// Return the number of HTTP requests made. This count includes requests made using cloned
+    /// instances of the `RateLimitedClient`.
+    pub fn n_requests(&self) -> u32 {
+        self.n_requests.load(Ordering::SeqCst)
     }
 
     /// Get the crossword puzzle id for each crossword in the provided range. This id is needed to

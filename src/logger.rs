@@ -22,7 +22,7 @@ pub enum Payload {
     Solve(PuzzleStats),
     Unsolved(PuzzleStats),
     FetchError,
-    Finished,
+    Finished(u32),
 }
 
 pub async fn task_fn(
@@ -33,8 +33,9 @@ pub async fn task_fn(
     while let Some(payload) = rx.recv().await {
         match payload {
             Payload::Solve(stats) | Payload::Unsolved(stats) => stats_db.add(stats),
-            Payload::Finished => {
-                progress.finish_with_message("All done 🎉");
+            Payload::Finished(n_requests) => {
+                let msg = format!("🎉 All done after {} requests", n_requests);
+                progress.finish_with_message(&msg);
                 break;
             }
             Payload::FetchError => (),
