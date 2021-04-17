@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::api_client::RateLimitedClient;
-use crate::database::PuzzleStats;
-use crate::logger;
+use crate::api_client::{self, RateLimitedClient};
+use crate::{logger, PuzzleStats};
 use anyhow::Result;
 use futures::future;
 use log::{debug, error, warn};
@@ -84,7 +83,7 @@ async fn search_date_block(
     let end = block.iter().last().unwrap().date;
 
     debug!("Fetching ids for date range {} to {}", start, end);
-    let id_map = match client.get_puzzle_ids(start, end).await {
+    let id_map = match api_client::get_puzzle_ids(&client, start, end).await {
         Ok(map) => map,
         Err(e) => {
             // This may occur if the entire date block consists of unreleased puzzles, which would
@@ -132,7 +131,7 @@ async fn get_solve_stats(
     logger: mpsc::UnboundedSender<logger::Payload>,
 ) -> Result<()> {
     let id = puzzle.puzzle_id.unwrap();
-    match client.get_solve_stats(id).await {
+    match api_client::get_solve_stats(&client, id).await {
         Ok(Some(solve_stats)) => {
             puzzle.update_stats(solve_stats);
             logger.send(logger::Payload::Solve(puzzle)).unwrap();

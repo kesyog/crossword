@@ -17,13 +17,75 @@ pub mod database;
 pub mod logger;
 pub mod search;
 
-use chrono::{naive::NaiveDate, Duration};
-use database::{Database, PuzzleStats};
+use api_client::SolvedPuzzleStats;
+use chrono::{naive::NaiveDate, Datelike, Duration, Weekday};
+use database::Database;
+use serde::{Deserialize, Serialize};
 use std::cmp;
 
 // Size of each block of dates to fetch metadata about. Currently hard-coded to match the expected
 // server response with no validation that this is correct.
 pub const DAY_STEP: i64 = 100;
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize, Serialize)]
+pub struct PuzzleStats {
+    pub date: NaiveDate,
+    /// id used to identify a puzzle to NYT server
+    pub puzzle_id: Option<u32>,
+    weekday: Weekday,
+    // It would be nice to embed SolvedPuzzleStats here, but serde's flatten attribute doesn't play
+    // well with the csv crate
+    pub solve_time_secs: Option<u32>,
+    opened_unix: Option<u32>,
+    solved_unix: Option<u32>,
+    pub cheated: Option<bool>,
+}
+
+impl PuzzleStats {
+    #[must_use]
+    pub fn new(date: NaiveDate, id: u32, solve_stats: Option<SolvedPuzzleStats>) -> Self {
+        let weekday = date.weekday();
+        Self {
+            date,
+            puzzle_id: Some(id),
+            weekday,
+            solve_time_secs: solve_stats.map(|s| s.solve_time),
+            opened_unix: solve_stats.and_then(|s| s.opened),
+            solved_unix: solve_stats.and_then(|s| s.solved),
+            cheated: Some(false),
+        }
+    }
+
+    #[must_use]
+    pub fn empty(date: NaiveDate) -> Self {
+        let weekday = date.weekday();
+        Self {
+            date,
+            weekday,
+            puzzle_id: None,
+            solve_time_secs: None,
+            opened_unix: None,
+            solved_unix: None,
+            cheated: Some(false),
+        }
+    }
+
+    pub const fn is_complete(&self) -> bool {
+        self.puzzle_id.is_some() && (self.solve_time_secs.is_some() || self.cheated.is_some())
+    }
+
+    pub fn update_stats(&mut self, stats: SolvedPuzzleStats) {
+        if stats.cheated {
+            self.cheated = Some(true);
+            self.solve_time_secs = None;
+        } else {
+            self.cheated = Some(false);
+            self.solve_time_secs = Some(stats.solve_time);
+        }
+        self.opened_unix = stats.opened;
+        self.solved_unix = stats.solved;
+    }
+}
 
 /// Get records within the given range, inclusive, that are missing ids, including for days that
 /// are not present in the database. The results are split into chunks no more than
@@ -124,6 +186,28 @@ mod tests {
         // Record with no solve stats but with an id
         let unsolved_ided_date = NaiveDate::from_ymd(2020, 1, 4);
         db.add(PuzzleStats::new(unsolved_ided_date, 100, None));
+        // Record with cheated solve and with an id
+        let cheated_ided_date = NaiveDate::from_ymd(2020, 1, 8);
+        db.add(PuzzleStats::new(
+            cheated_ided_date,
+            400,
+            Some(SolvedPuzzleStats {
+                cheated: true,
+                ..Default::default()
+            }),
+        ));
+        // Record with cheated solve and no id
+        let cheated_unided_date = NaiveDate::from_ymd(2020, 1, 9);
+        let mut cheated_unided = PuzzleStats::new(
+            cheated_unided_date,
+            0,
+            Some(SolvedPuzzleStats {
+                cheated: true,
+                ..Default::default()
+            }),
+        );
+        cheated_unided.puzzle_id = None;
+        db.add(cheated_unided);
 
         let start = NaiveDate::from_ymd(2020, 1, 1);
         let end = NaiveDate::from_ymd(2020, 1, 11);
@@ -144,6 +228,14 @@ mod tests {
         assert!(
             !contains_date(&chunks, unsolved_ided_date),
             "Unsolved, ided record should not be returned"
+        );
+        assert!(
+            !contains_date(&chunks, cheated_ided_date),
+            "Cheated, ided record should not be returned"
+        );
+        assert!(
+            contains_date(&chunks, cheated_unided_date),
+            "Cheated, unided record should not be returned"
         );
         assert!(
             contains_date(&chunks, end),

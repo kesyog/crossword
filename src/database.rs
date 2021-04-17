@@ -12,65 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::api_client::SolvedPuzzleStats;
+use crate::PuzzleStats;
 use anyhow::{Context, Result};
-use chrono::{naive::NaiveDate, Datelike, Weekday};
+use chrono::naive::NaiveDate;
 use log::{error, warn};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize, Serialize)]
-pub struct PuzzleStats {
-    pub date: NaiveDate,
-    /// id used to identify a puzzle to NYT server
-    /// TODO: consider removing Option wrapper once database has been fully updated with ids
-    pub puzzle_id: Option<u32>,
-    weekday: Weekday,
-    // It would be nice to embed SolvedPuzzleStats here, but serde's flatten attribute doesn't play
-    // well with the csv crate
-    pub solve_time_secs: Option<u32>,
-    opened_unix: Option<u32>,
-    solved_unix: Option<u32>,
-}
-
-impl PuzzleStats {
-    pub fn new(date: NaiveDate, id: u32, solve_stats: Option<SolvedPuzzleStats>) -> Self {
-        let weekday = date.weekday();
-        Self {
-            date,
-            puzzle_id: Some(id),
-            weekday,
-            solve_time_secs: solve_stats.map(|s| s.solve_time),
-            opened_unix: solve_stats.and_then(|s| s.opened),
-            solved_unix: solve_stats.and_then(|s| s.solved),
-        }
-    }
-
-    pub fn empty(date: NaiveDate) -> Self {
-        let weekday = date.weekday();
-        Self {
-            date,
-            weekday,
-            puzzle_id: None,
-            solve_time_secs: None,
-            opened_unix: None,
-            solved_unix: None,
-        }
-    }
-
-    pub const fn is_complete(&self) -> bool {
-        matches!((self.puzzle_id, self.solve_time_secs), (Some(_), Some(_)))
-    }
-
-    pub fn update_stats(&mut self, stats: SolvedPuzzleStats) {
-        self.solve_time_secs = Some(stats.solve_time);
-        self.opened_unix = stats.opened;
-        self.solved_unix = stats.solved;
-    }
-}
 
 #[derive(Debug)]
 pub struct Database {
@@ -80,6 +29,7 @@ pub struct Database {
 
 impl Database {
     /// Create a new database at the given path
+    #[must_use]
     pub fn new<T: Into<PathBuf>>(out_path: T) -> Self {
         Self {
             records: HashMap::new(),
@@ -99,10 +49,12 @@ impl Database {
         })
     }
 
+    #[must_use]
     pub fn records(&self) -> Vec<PuzzleStats> {
         self.records.values().copied().collect()
     }
 
+    #[must_use]
     pub fn get(&self, date: NaiveDate) -> Option<PuzzleStats> {
         self.records.get(&date).copied()
     }
