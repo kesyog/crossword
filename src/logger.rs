@@ -21,7 +21,7 @@ use tokio::sync::mpsc;
 pub enum Payload {
     Solve(PuzzleStats),
     Unsolved(PuzzleStats),
-    FetchError,
+    FetchError(Option<PuzzleStats>),
     Finished(u32),
 }
 
@@ -32,14 +32,16 @@ pub async fn task_fn(
 ) -> Result<()> {
     while let Some(payload) = rx.recv().await {
         match payload {
-            Payload::Solve(stats) | Payload::Unsolved(stats) => stats_db.add(stats),
+            Payload::Solve(stats) | Payload::Unsolved(stats) | Payload::FetchError(Some(stats)) => {
+                stats_db.add(stats);
+            }
             Payload::Finished(n_requests) => {
                 stats_db.flush()?;
                 let msg = format!("🎉 All done after {} requests", n_requests);
                 progress.finish_with_message(&msg);
                 break;
             }
-            Payload::FetchError => (),
+            Payload::FetchError(_) => (),
         }
         progress.inc(1);
     }

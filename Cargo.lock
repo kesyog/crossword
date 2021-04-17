@@ -244,6 +244,7 @@ dependencies = [
  "reqwest",
  "serde",
  "structopt",
+ "tempfile",
  "tokio",
 ]
 
