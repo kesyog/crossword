@@ -22,7 +22,7 @@ use governor::{Quota, RateLimiter};
 use log::error;
 use reqwest::header::{self, HeaderMap};
 use reqwest::IntoUrl;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -55,8 +55,7 @@ impl PuzzleStatsResponse {
             stats.solved = firsts.solved;
             match (firsts.checked, firsts.revealed) {
                 (None, None) => (),
-                // Skip over puzzles where the check or reveal assists were used
-                _ => return None,
+                _ => stats.cheated = true,
             }
         }
 
@@ -90,11 +89,12 @@ struct RawFirsts {
     solved: Option<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Default)]
 pub struct SolvedPuzzleStats {
     pub solve_time: u32,
     pub opened: Option<u32>,
     pub solved: Option<u32>,
+    pub cheated: bool,
 }
 
 /// An HTTP client with a rate-limiting wrapper
@@ -155,36 +155,40 @@ impl RateLimitedClient {
     pub fn n_requests(&self) -> u32 {
         self.n_requests.load(Ordering::SeqCst)
     }
+}
 
-    /// Get the crossword puzzle id for each crossword in the provided range. This id is needed to
-    /// further query for solve stats.
-    ///
-    /// Returns a `HashMap` mapping `NaiveDate` dates to `u32` ids.
-    pub async fn get_puzzle_ids(
-        &self,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Result<HashMap<NaiveDate, u32>> {
-        let endpoint = Self::PUZZLE_INFO_ENDPOINT
-            .replace("{start_date}", &start.format("%Y-%m-%d").to_string())
-            .replace("{end_date}", &end.format("%Y-%m-%d").to_string());
-        let url = Self::api_url(&endpoint);
-        let response: PuzzleInfoResponse = self.get(&url).await?.json().await?;
-        Ok(response
-            .results
-            .into_iter()
-            .map(|metadata| (metadata.print_date, metadata.puzzle_id))
-            .collect())
-    }
+/// Get the crossword puzzle id for each crossword in the provided range. This id is needed to
+/// further query for solve stats.
+///
+/// Returns a `HashMap` mapping `NaiveDate` dates to `u32` ids.
+pub async fn get_puzzle_ids(
+    client: &RateLimitedClient,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<HashMap<NaiveDate, u32>> {
+    let endpoint = RateLimitedClient::PUZZLE_INFO_ENDPOINT
+        .replace("{start_date}", &start.format("%Y-%m-%d").to_string())
+        .replace("{end_date}", &end.format("%Y-%m-%d").to_string());
+    let url = RateLimitedClient::api_url(&endpoint);
+    let response: PuzzleInfoResponse = client.get(&url).await?.json().await?;
+    Ok(response
+        .results
+        .into_iter()
+        .map(|metadata| (metadata.print_date, metadata.puzzle_id))
+        .collect())
+}
 
-    /// Get solve statistics for the crossword with the given id
-    ///
-    /// Returns a `Result` containing the statistics. If the provided `Option` is `None`, the puzzle
-    /// was either unsolved or solved with aid.
-    pub async fn get_solve_stats(&self, puzzle_id: u32) -> Result<Option<SolvedPuzzleStats>> {
-        let endpoint = Self::PUZZLE_STATS_ENDPOINT.replace("{id}", &puzzle_id.to_string());
-        let url = Self::api_url(&endpoint);
-        let response: PuzzleStatsResponse = self.get(&url).await?.json().await?;
-        Ok(response.collect_stats())
-    }
+/// Get solve statistics for the crossword with the given id
+///
+/// Returns a `Result` containing the statistics. If the provided `Option` is `None`, the puzzle
+/// was unsolved. Note that one must check the `SolvedPuzzleStats.cheated` field to see if a solved
+/// puzzle was solved using aids.
+pub async fn get_solve_stats(
+    client: &RateLimitedClient,
+    puzzle_id: u32,
+) -> Result<Option<SolvedPuzzleStats>> {
+    let endpoint = RateLimitedClient::PUZZLE_STATS_ENDPOINT.replace("{id}", &puzzle_id.to_string());
+    let url = RateLimitedClient::api_url(&endpoint);
+    let response: PuzzleStatsResponse = client.get(&url).await?.json().await?;
+    Ok(response.collect_stats())
 }

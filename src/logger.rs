@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::database::{Database, PuzzleStats};
+use crate::database::Database;
+use crate::PuzzleStats;
 use anyhow::Result;
 use indicatif::ProgressBar;
 use tokio::sync::mpsc;
