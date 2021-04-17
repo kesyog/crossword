@@ -46,21 +46,27 @@ and then run the following to generate a CSV file containing the data:
 $ cargo run --release -- --help
 
 # Example usage starting search from the crossword on January 1, 2016 onward
-$ cargo run --release -- -t <your NYT token> -s 2016-01-01 -o data.csv
+# Subsequent program runs will use existing file as a cache 
+$ cargo run --release -- -t <your NYT token> -s 2016-01-01 data.csv
 
-# Example usage using cached data from a previous run to reduce the number of new requests made
-$ cargo run --release -- -t <your NYT token> -s 2016-01-01 -c old_data.csv -o new_data.csv
-
-# Example usage with increased quota to speed up rate-limiting by a factor of 2
+# Example usage with increased quota to set rate-limit to 10 requests/second
 $ cargo run --release -- -t <your NYT token> -s 2016-01-01 -q 10 -o data.csv
 ```
 
 The NYT subscription token must be extracted via your browser (see below).
 
-The program will fetch results concurrently, but by default, requests are limited to 5 per second in an attempt to avoid spamming the NYT's servers.
+The program will fetch results concurrently, but by default, requests are limited to 5 per second to reduce the load on NYT's servers.
 While you can choose to override that limit to speed up the search, be nice and use something reasonable.
 There shouldn't be any need to run this script very often so it's better to just err on the side of being slow.
 Regardless of the setting you use, default or not, I'm not responsible for anything that happens to your account.
+
+### Design goals
+
+1. Reduce requests made to NYT's servers. If provided, data from previous runs is loaded and used to
+avoid re-requesting information pulled from previous runs.
+2. Reduce load on NYT's servers. Requests made to the server are rate-limited.
+3. Maximum concurrency. Requests are made as concurrently as possible given the other two
+constraints thanks to async/await. It's totally overkill with the default amount of rate-limiting 🤷🏽‍♂
 
 ### Under the hood
 
@@ -101,7 +107,6 @@ works great.
 ## TODO
 
 * Add plotting code
-* Run script regularly
 
 ## References
 
