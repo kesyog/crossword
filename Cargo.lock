@@ -229,7 +229,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "crosswords"
+name = "crossword"
 version = "0.1.0"
 dependencies = [
  "anyhow",

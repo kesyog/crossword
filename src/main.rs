@@ -15,9 +15,9 @@
 use anyhow::Result;
 use chrono::{naive::NaiveDate, Duration};
 use core::num::NonZeroU32;
-use crosswords::api_client::RateLimitedClient;
-use crosswords::database::Database;
-use crosswords::{logger, DAY_STEP};
+use crossword::api_client::RateLimitedClient;
+use crossword::database::Database;
+use crossword::{logger, DAY_STEP};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::warn;
 use std::convert::TryInto;
@@ -63,13 +63,13 @@ async fn main() -> Result<()> {
         Database::new(opt.db_path)
     };
 
-    let missing_ids = crosswords::get_days_without_ids_chunked(
+    let missing_ids = crossword::get_days_without_ids_chunked(
         &stats_db,
         opt.start_date,
         today,
         Duration::days(DAY_STEP),
     );
-    let cached_unsolved = crosswords::get_cached_unsolved_records(&stats_db);
+    let cached_unsolved = crossword::get_cached_unsolved_records(&stats_db);
 
     let total_days = missing_ids.iter().map(Vec::len).sum::<usize>() + cached_unsolved.len();
     let progress = ProgressBar::new(total_days.try_into().unwrap()).with_style(
@@ -89,12 +89,12 @@ async fn main() -> Result<()> {
 
     let client = RateLimitedClient::new(&opt.nyt_token, opt.request_quota);
 
-    let ids_task = tokio::spawn(crosswords::search::fetch_ids_and_stats(
+    let ids_task = tokio::spawn(crossword::search::fetch_ids_and_stats(
         client.clone(),
         missing_ids,
         tx.clone(),
     ));
-    let unsolved_task = tokio::spawn(crosswords::search::fetch_missing_times(
+    let unsolved_task = tokio::spawn(crossword::search::fetch_missing_times(
         client.clone(),
         cached_unsolved,
         tx.clone(),
