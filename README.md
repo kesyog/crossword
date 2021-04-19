@@ -29,12 +29,11 @@ follow.
 
 Caveats:
 
-* Puzzles are currently plotted against the date they were released. This is accurate for puzzles
-during my current streak (i.e. after August 2017), but I did return to some older puzzles that I
-couldn't initially solve, which would skew the early data a bit. The NYT does store the timestamp
-when a puzzle is solved, so you could use that to discard those data points.
 * I didn't count any puzzles that I didn't finish or that I used the "check" or "reveal" assists on,
-so there's some survivorship bias. Again, this only affects the early data.
+so there's some survivorship bias. Again, this only affects the early data, as I've since stopped
+using those features.
+* I generally solve puzzles on my phone, but every now and then I'll solve them on my computer,
+which shaves some time off. This is just another source of noise.
 
 ## Scraping the data
 
@@ -104,9 +103,17 @@ when the puzzle was solved, and whether any assists were used.
 Use your favorite tools to analyze and plot the raw data stored in the CSV file. The Python-pandas-matplotlib trifecta
 works great.
 
-## TODO
+My plots are generated via the Python script in the [plot](./plot) folder. To use it, run the following:
 
-* Add plotting code
+```sh
+# Install prerequisites
+$ pip3 install -r plot/requirements.txt
+
+# Generate plot
+$ plot/plot.py <path to csv file> <path to save plot image>
+```
+
+The output path can be an SVG or PNG file. 
 
 ## References
 
