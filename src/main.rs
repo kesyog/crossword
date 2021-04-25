@@ -58,7 +58,8 @@ async fn main() -> Result<()> {
 
     let today = chrono::offset::Utc::today().naive_utc();
     let stats_db = if opt.db_path.exists() {
-        Database::from_file(opt.db_path).unwrap()
+        Database::from_file(opt.db_path)
+            .expect("Given file exists but does not contain a valid database")
     } else {
         Database::new(opt.db_path)
     };
@@ -69,7 +70,7 @@ async fn main() -> Result<()> {
         today,
         Duration::days(DAY_STEP),
     );
-    let cached_unsolved = crossword::get_cached_unsolved_records(&stats_db);
+    let cached_unsolved = crossword::get_cached_unsolved_records(&stats_db, opt.start_date);
 
     let total_days = missing_ids.iter().map(Vec::len).sum::<usize>() + cached_unsolved.len();
     let progress = ProgressBar::new(total_days.try_into().unwrap()).with_style(

@@ -70,10 +70,14 @@ impl PuzzleStats {
         }
     }
 
-    pub const fn is_complete(&self) -> bool {
-        self.puzzle_id.is_some() && (self.solve_time_secs.is_some() || self.cheated.is_some())
+    /// Returns true if there is no more information to fetch for the given record because it has
+    /// already been completed, with or without cheats, and all expected fields are filled.
+    pub fn is_complete(&self) -> bool {
+        self.puzzle_id.is_some()
+            && (self.solve_time_secs.is_some() || self.cheated.unwrap_or(false))
     }
 
+    /// Update the given record with information from the given `SolvedPuzzleStats`
     pub fn update_stats(&mut self, stats: SolvedPuzzleStats) {
         if stats.cheated {
             self.cheated = Some(true);
@@ -139,9 +143,9 @@ pub fn get_days_without_ids_chunked(
 
 /// Get records from database that have a cached puzzle id but aren't known to be solved
 #[must_use]
-pub fn get_cached_unsolved_records(database: &Database) -> Vec<PuzzleStats> {
+pub fn get_cached_unsolved_records(database: &Database, start: NaiveDate) -> Vec<PuzzleStats> {
     let mut records = database.records();
-    records.retain(|r| !r.is_complete() && r.puzzle_id.is_some());
+    records.retain(|r| !r.is_complete() && r.puzzle_id.is_some() && r.date >= start);
     records
 }
 
@@ -153,17 +157,17 @@ mod tests {
     use std::default::Default;
     use tempfile::NamedTempFile;
 
-    fn contains_date(haystack: &Vec<Vec<PuzzleStats>>, date: NaiveDate) -> bool {
-        haystack
-            .into_iter()
-            .flatten()
-            .any(|record| record.date == date)
-    }
-
     #[test]
     /// Test get_days_without_ids_chunked
     /// TODO: add more test coverage
     fn days_without_ids() -> Result<()> {
+        fn contains_date(haystack: &Vec<Vec<PuzzleStats>>, date: NaiveDate) -> bool {
+            haystack
+                .into_iter()
+                .flatten()
+                .any(|record| record.date == date)
+        }
+
         let file = NamedTempFile::new()?;
         let path = file.into_temp_path().to_path_buf();
         let mut db = Database::new(path);
@@ -245,6 +249,75 @@ mod tests {
             !contains_date(&chunks, end + Duration::days(1)),
             "The end date should be the last included date"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    /// Test get_days_without_ids_chunked
+    /// TODO: add more test coverage
+    fn test_get_cached_unsolved_records() -> Result<()> {
+        fn contains_date(haystack: &Vec<PuzzleStats>, date: NaiveDate) -> bool {
+            haystack.into_iter().any(|record| record.date == date)
+        }
+
+        let file = NamedTempFile::new()?;
+        let path = file.into_temp_path().to_path_buf();
+        let mut db = Database::new(path);
+        // Empty record
+        let empty_date = NaiveDate::from_ymd(2020, 1, 1);
+        db.add(PuzzleStats::empty(empty_date));
+        // Record with solve stats but without an id
+        let solved_no_id_date = NaiveDate::from_ymd(2020, 1, 2);
+        let mut solved_no_id =
+            PuzzleStats::new(solved_no_id_date, 0, Some(SolvedPuzzleStats::default()));
+        solved_no_id.puzzle_id = None;
+        db.add(solved_no_id);
+        // Record with solve stats and id
+        let solved_ided_date = NaiveDate::from_ymd(2020, 1, 3);
+        db.add(PuzzleStats::new(
+            solved_ided_date,
+            20,
+            Some(SolvedPuzzleStats::default()),
+        ));
+        // Record with no solve stats but with an id
+        let unsolved_ided_date = NaiveDate::from_ymd(2020, 1, 4);
+        db.add(PuzzleStats::new(unsolved_ided_date, 100, None));
+        // Record with cheated solve and with an id
+        let cheated_ided_date = NaiveDate::from_ymd(2020, 1, 8);
+        db.add(PuzzleStats::new(
+            cheated_ided_date,
+            400,
+            Some(SolvedPuzzleStats {
+                cheated: true,
+                ..Default::default()
+            }),
+        ));
+        // Record with cheated solve and no id
+        let cheated_unided_date = NaiveDate::from_ymd(2020, 1, 9);
+        let mut cheated_unided = PuzzleStats::new(
+            cheated_unided_date,
+            0,
+            Some(SolvedPuzzleStats {
+                cheated: true,
+                ..Default::default()
+            }),
+        );
+        cheated_unided.puzzle_id = None;
+        db.add(cheated_unided);
+
+        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 5)).is_empty());
+        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 8)).is_empty());
+        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 9)).is_empty());
+        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 10)).is_empty());
+
+        let cached_unsolved = get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 4));
+        assert!(cached_unsolved.len() == 1);
+        assert!(contains_date(&cached_unsolved, unsolved_ided_date));
+
+        let cached_unsolved = get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 1));
+        assert!(cached_unsolved.len() == 1);
+        assert!(contains_date(&cached_unsolved, unsolved_ided_date));
 
         Ok(())
     }
