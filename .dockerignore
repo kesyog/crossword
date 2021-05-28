@@ -1,5 +1,5 @@
-/target
-.env
+Dockerfile
+README.md
 
 # Python artifacts
 *.pyc
