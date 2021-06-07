@@ -22,6 +22,7 @@ It expects two positional arguments:
 are supported.
 """
 
+import datetime
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -68,7 +69,10 @@ def save_plot(df, out_path):
     Y_MAX = df["solve_time_secs"].quantile(0.99) / 60
 
     fig = plt.figure(figsize=(10, 7), dpi=200)
-    plt.title("NYT crossword solve time (8-week rolling average) by date of solve")
+    today = datetime.date.today().isoformat()
+    plt.title(
+        f"NYT crossword solve time (8-week rolling average) by date of solve as of {today}"
+    )
     ax = fig.gca()
     for day in DAYS:
         rolling_avg = df[df["weekday"] == day]["solve_time_secs"].rolling("56D").mean()
@@ -86,10 +90,12 @@ def save_plot(df, out_path):
     plt.grid(True, which="both", axis="both")
     plt.savefig(out_path)
 
+
 def generate(in_file, out_file):
     sns.set_style("ticks")
     df = parse_data(in_file)
     save_plot(df, out_file)
+
 
 def main():
     try:
@@ -104,6 +110,7 @@ def main():
         return
 
     generate(in_file, out_file)
+
 
 if __name__ == "__main__":
     main()

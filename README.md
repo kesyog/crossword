@@ -15,7 +15,7 @@ open each puzzle in the archive individually and see your times, but there aren'
 or officially-sanctioned developer APIs to fetch your data. Luckily, all puzzle stats are fetched
 via client-side Javascript, making it easy enough to scrape the data.
 
-Daily-updating plot:
+Regularly-updating plot:
 
 ![chart of solve times](https://storage.googleapis.com/xword-plots/plot.svg)
 
