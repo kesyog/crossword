@@ -27,7 +27,11 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 import sys
+
+plt.style.use('Solarize_Light2')
+DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 
 def parse_data(csv_path):
@@ -63,38 +67,83 @@ def parse_data(csv_path):
 
 
 def save_plot(df, out_path):
-    DAYS = df["weekday"].unique()
-
     # Pick an appropriate y-axis, balancing being robust to outliers vs. showing all data
     Y_MAX = df["solve_time_secs"].quantile(0.99) / 60
+    Y_MAX = 60 # unfortunately, an hour is a good upper limit for me.
 
     fig = plt.figure(figsize=(10, 7), dpi=200)
     today = datetime.date.today().isoformat()
     plt.title(
-        f"NYT crossword solve time (8-week rolling average) by date of solve as of {today}"
+        f"NYT crossword solve time (8-week rolling average) as of {today}"
     )
     ax = fig.gca()
     for day in DAYS:
         rolling_avg = df[df["weekday"] == day]["solve_time_secs"].rolling("56D").mean()
         (rolling_avg / 60.0).plot(
-            ax=ax, label=day, linewidth=2, markersize=20, marker=",", linestyle="-"
+            ax=ax, label=day, linewidth=2, markersize=4, marker="o", linestyle="-"
         )
     plt.legend()
 
-    ax.set_xlabel("Date solved")
+    ax.set_xlabel("Solve Date")
     ax.set_ylabel("Minutes")
     minor_yticks = np.arange(0, Y_MAX + 1, 5)
     ax.set_ylim(0, Y_MAX)
     ax.set_yticks(minor_yticks, minor=True)
 
+    plt.xticks(rotation=0)
+
     plt.grid(True, which="both", axis="both")
     plt.savefig(out_path)
 
 
+def save_vln_plot(df, out_path):
+    # ridge plot may be fun to try too:
+    # https://seaborn.pydata.org/examples/kde_ridgeplot.html
+    df['solve_time_m'] = df['solve_time_secs'] / 60.0
+    ax = sns.violinplot(x="weekday", y="solve_time_m", data=df, order=DAYS)
+
+    date = max(df['Solved datetime']).strftime("%b %d, %Y")
+    ax.set_title("%d NYT Crossword Solve Times by Day of Week as of %s" % (len(df), date))
+    ax.set_xlabel("Day of Week")
+    ax.set_ylabel("Minutes to Solve")
+
+    ax.set_ylim(0, 65)
+    ax.set_yticks(np.arange(0, 60, 5))
+
+    ax.get_legend().remove()
+    plt.savefig(out_path)
+    plt.close()
+
+
+def save_split_vln_plot(df, out_path):
+    # minor tweak to save_vln_plot, too much repitition...
+    df['solve_time_m'] = df['solve_time_secs'] / 60.0
+    df['In 2021'] = df['Solved datetime'] > datetime.datetime(2021, 1, 1)
+    ax = sns.violinplot(x="weekday", y="solve_time_m", hue='In 2021',
+        split=True, data=df, bw=.25, order=DAYS)
+
+    date = max(df['Solved datetime']).strftime("%b %d, %Y")
+    ax.set_title("%d NYT Crossword Solve Times by Day of Week as of %s" % (len(df), date))
+    ax.set_xlabel("Day of Week")
+    ax.set_ylabel("Minutes to Solve")
+
+    ax.set_ylim(0, 65)
+    ax.set_yticks(np.arange(0, 65, 5))
+
+    ax.legend() # seems to have the effect of removing the title of the legend?
+    handles, labels  = ax.get_legend_handles_labels()
+    ax.legend(handles, ["Before 2021", "2021"], loc="upper left")
+
+    plt.savefig(out_path)
+    plt.close()
+
+
 def generate(in_file, out_file):
-    sns.set_style("ticks")
+    # sns.set_style("ticks")
     df = parse_data(in_file)
     save_plot(df, out_file)
+    save_vln_plot(df, "%s Violin Plot%s" % os.path.splitext(out_file))
+    save_split_vln_plot(df, "%s Split Violin Plot%s" % os.path.splitext(out_file))
 
 
 def main():
