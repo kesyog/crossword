@@ -1,25 +1,25 @@
 [package]
 name = "crossword"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Kesavan Yogeswaran <hikes@google.com>"]
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 repository = "https://github.com/kesyog/crossword"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
-csv = "1.1.5"
+csv = "1"
 dotenv = "0.15"
-futures = "0.3.12"
-governor = "0.3.2"
-indicatif = { version = "0.15.0", features = ["improved_unicode"] }
-log = "0.4.14"
-pretty_env_logger = "0.4.0"
+futures = "0.3"
+governor = "0.4"
+indicatif = { version = "0.16", features = ["improved_unicode"] }
+log = "0.4"
+pretty_env_logger = "0.4"
 reqwest = { version = "0.11", features = ["rustls-tls", "json", "gzip", "brotli"] }
-serde = { version = "1.0", features = ["derive"] }
-structopt = "0.3.21"
+serde = { version = "1", features = ["derive"] }
+structopt = "0.3"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
 
 [dev-dependencies]
