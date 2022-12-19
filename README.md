@@ -1,6 +1,6 @@
 # Scraping NYT crossword stats ⬛⬜⬜⬜⬜⬛
 
-[![build status](https://img.shields.io/github/workflow/status/kesyog/crossword/Build?style=flat-square)](https://github.com/kesyog/crossword/actions/workflows/build.yml)
+[![build status](https://img.shields.io/github/actions/workflow/status/kesyog/crossword/build.yml?branch=main&style=flat-square)](https://github.com/kesyog/crossword/actions/workflows/build.yml)
 [![Apache 2.0 license](https://img.shields.io/github/license/kesyog/crossword?style=flat-square)](./LICENSE)
 
 When I first subscribed to the _New York Times_ crossword in January 2017, I could solve some Monday
