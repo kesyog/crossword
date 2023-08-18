@@ -81,7 +81,7 @@ def save_plot(df, out_path, ymax):
     for day in DAYS:
         rolling_avg = df[df["weekday"] == day]["solve_time_secs"].rolling("56D").mean()
         (rolling_avg / 60.0).plot(
-            ax=ax, label=day, linewidth=2, markersize=4, marker="o", linestyle="-"
+            ax=ax, label=day, linewidth=2, markersize=20, marker=",", linestyle="-"
         )
     plt.legend()
 
