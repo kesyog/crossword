@@ -98,7 +98,7 @@ in YYYY-MM-DD format ([ISO 8601](https://xkcd.com/1179)). The server response is
 puzzles and can be limited further by adding a `limit` parameter.
 
     ```sh
-    curl 'https://nyt-games-prd.appspot.com/svc/crosswords/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
+    curl 'https://www.nytimes.com/svc/crosswords/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
     ```
 
 1. To fetch solve stats for a given puzzle, send a GET request as below, replacing `{id}` with the
@@ -108,7 +108,7 @@ in your browser. Alternatively, you can supposedly extract your session cookie f
 send that instead (see linked reddit post below), but I haven't tried it myself.
   
     ```sh
-    curl 'https://nyt-games-prd.appspot.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' -H 'nyt-s: {subscription_header}'
+    curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' -H 'nyt-s: {subscription_header}'
     ```
 
 1. Check out the `calcs` and `firsts` field of this response to get information like solve duration,
