@@ -48,7 +48,7 @@ def parse_data(csv_path):
     solve_time_secs
     weekday
     """
-    df = pd.read_csv(csv_path, parse_dates=["date"], index_col="date")
+    df = pd.read_csv(csv_path, parse_dates=["date"])
     df["Solved datetime"] = pd.to_datetime(df["solved_unix"], unit="s")
     # Use the date solved rather than the puzzle date as the index.
     # Puzzle date is interesting for analyzing puzzle difficulty over time (but skewed by change
@@ -74,6 +74,7 @@ def parse_data(csv_path):
 def save_plot(df, out_path, ymax):
     fig = plt.figure(figsize=(10, 7), dpi=200)
     today = datetime.date.today().isoformat()
+    latest_solve = df['date'].sort_values()[-1].date().isoformat()
     plt.title(
         f"NYT crossword solve time (8-week rolling average) as of {today}"
     )
@@ -85,7 +86,7 @@ def save_plot(df, out_path, ymax):
         )
     plt.legend()
 
-    ax.set_xlabel("Solve Date")
+    ax.set_xlabel(f"Solve Date (latest: {latest_solve})")
     ax.set_ylabel("Minutes")
     minor_yticks = np.arange(0, ymax + 1, 5)
     ax.set_ylim(0, ymax)
