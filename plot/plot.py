@@ -153,10 +153,10 @@ def save_split_vln_plot(df, out_path, ymax):
     plt.close()
 
 
-def generate(in_file, out_file, ceiling):
+def generate(in_file, out_file, ceiling = None):
     df = parse_data(in_file)
 
-    if ceiling == 0:
+    if ceiling is None:
         # Pick an appropriate y-axis, balancing being robust to outliers vs. showing all data
         ymax = df["solve_time_secs"].quantile(0.99) / 60
     else:
