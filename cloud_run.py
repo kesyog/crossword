@@ -62,7 +62,12 @@ def generate_plot():
 
 
 def update_csv():
-    subprocess.run(["crossword", LOCAL_CSV_FILENAME], check=True)
+    subprocess.run(
+        ["crossword", LOCAL_CSV_FILENAME],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 @app.route("/")
