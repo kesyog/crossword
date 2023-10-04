@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
     pretty_env_logger::init();
     let opt = Opt::from_args();
 
-    let today = chrono::offset::Utc::today().naive_utc();
+    let today = chrono::offset::Utc::now().date_naive();
     let stats_db = if opt.db_path.exists() {
         Database::from_file(opt.db_path)
             .expect("Given file exists but does not contain a valid database")
