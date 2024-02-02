@@ -24,6 +24,9 @@ import seaborn as sns
 
 DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+YEAR_TO_SPLIT = datetime.datetime.now().year - 1
+YEAR_TO_SPLIT_STR = str(YEAR_TO_SPLIT)
+
 A = argparse.ArgumentParser(
     description='Generates plots of crossword statistics from a CSV',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -124,7 +127,7 @@ def save_vln_plot(df, out_path, ymax):
 
 def save_split_vln_plot(df, out_path, ymax):
     """
-        Splits the violin plot into pre-2021 and 2021+ sections to look
+        Splits the violin plot into pre- and post- YEAR_TO_SPLIT sections to look
         at progress over time.
 
         df: dataframe containing crossword times
@@ -132,10 +135,13 @@ def save_split_vln_plot(df, out_path, ymax):
         ceiling: max y-value to show
     """
     df['solve_time_m'] = df['solve_time_secs'] / 60.0
-    # TODO: should probably not hard-code 2021 and instead pass in a date.
-    df['In 2021'] = df['Solved datetime'] > datetime.datetime(2021, 1, 1)
-    ax = sns.violinplot(x="weekday", y="solve_time_m", hue='In 2021',
-                        split=True, data=df, bw=.25, order=DAYS)
+    df['In ' + YEAR_TO_SPLIT_STR] = df['Solved datetime'] > datetime.datetime(YEAR_TO_SPLIT, 1, 1)
+    try:
+        ax = sns.violinplot(x="weekday", y="solve_time_m", hue='In ' + YEAR_TO_SPLIT_STR,
+                            split=True, data=df, bw=.25, order=DAYS)
+    except:
+        # Happens if there is no data from last year
+        return
 
     date = max(df['Solved datetime']).strftime("%b %d, %Y")
     ax.set_title("%d NYT Crossword Solve Times by Day of Week as of %s" % (len(df), date))
@@ -147,7 +153,7 @@ def save_split_vln_plot(df, out_path, ymax):
 
     ax.legend()  # Seems to have the effect of removing the title of the legend
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, ["Before 2021", "2021"], loc="upper left")
+    ax.legend(handles, ["Before " + YEAR_TO_SPLIT_STR, YEAR_TO_SPLIT_STR + "+"], loc="upper left")
 
     plt.savefig(out_path)
     plt.close()
@@ -156,7 +162,7 @@ def save_split_vln_plot(df, out_path, ymax):
 def generate(in_file, out_file, ceiling = None):
     df = parse_data(in_file)
 
-    if ceiling is None:
+    if not ceiling:
         # Pick an appropriate y-axis, balancing being robust to outliers vs. showing all data
         ymax = df["solve_time_secs"].quantile(0.99) / 60
     else:
