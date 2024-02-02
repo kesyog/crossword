@@ -80,8 +80,8 @@ browsers' developer tools.
 1. Navigate to <https://www.nytimes.com/crosswords>
 1. Look for a request for some kind of json file e.g. `progress.json`, `mini-stats.json`, or
 `stats-and-streaks.json`.
-1. In the headers pane, find the value of `nyt-s` in the list of request headers. That is your
-token. If you can't find the `nyt-s` header in the request, try a different json file.
+1. In the headers pane, find the list of cookies, and fine `NYT-S` in that string. That is your
+token. If you can't find the `NYT-S` cookie in the request, try a different json file.
 
 ### Under the hood
 
@@ -108,7 +108,7 @@ in your browser. Alternatively, you can supposedly extract your session cookie f
 send that instead (see linked reddit post below), but I haven't tried it myself.
   
     ```sh
-    curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' -H 'nyt-s: {subscription_header}'
+    curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' --cookie 'NYT-S={subscription_header}'
     ```
 
 1. Check out the `calcs` and `firsts` field of this response to get information like solve duration,

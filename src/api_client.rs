@@ -20,7 +20,7 @@ use governor::state::direct::NotKeyed;
 use governor::state::InMemoryState;
 use governor::{Quota, RateLimiter};
 use log::error;
-use reqwest::header::{self, HeaderMap};
+use reqwest::header::{self, HeaderMap, HeaderValue};
 use reqwest::IntoUrl;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -119,9 +119,9 @@ impl RateLimitedClient {
     /// * `quota` - Outgoing request quota in requests per second
     pub fn new(nyt_s: &str, quota: NonZeroU32) -> Self {
         let mut headers = HeaderMap::new();
-        headers.insert("nyt-s", nyt_s.parse().unwrap());
         headers.insert(header::ACCEPT, "application/json".parse().unwrap());
         headers.insert(header::DNT, "1".parse().unwrap());
+        headers.insert(header::COOKIE, HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap());
 
         let client = reqwest::ClientBuilder::new()
             .user_agent("Scraping personal stats")
