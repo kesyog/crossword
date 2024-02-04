@@ -21,9 +21,10 @@ jobs:
           toolchain: stable
           components: clippy, rustfmt
     - name: rustfmt
-      uses: mbrobbel/rustfmt-check@0.7.0
+      uses: mbrobbel/rustfmt-check@0.8.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        mode: review
     - name: clippy
       uses: clechasseur/rs-clippy-check@v2
       with:
