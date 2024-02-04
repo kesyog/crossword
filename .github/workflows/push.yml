@@ -1,9 +1,7 @@
-name: Build
+name: Push
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 env:
@@ -32,4 +30,3 @@ jobs:
       uses: mbrobbel/rustfmt-check@0.8.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        mode: review
