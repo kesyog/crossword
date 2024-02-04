@@ -12,10 +12,10 @@ gcloud auth login
 docker build -t `<image name>` .
 
 # Open a shell in container so you can run commands and test
-docker run -it --rm us.gcr.io/xword-stats/xword:latest bash
+docker run -it --rm <image name>:latest bash
 
 # Push image to registry
-docker push us.gcr.io/xword-stats/xword:latest
+docker push <image name>:latest
 
 # Use Cloud console to point Cloud Run to latest image
 ```

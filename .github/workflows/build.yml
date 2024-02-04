@@ -11,25 +11,25 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@stable
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@nightly
       with:
-          toolchain: stable
           components: clippy, rustfmt
+    - name: clippy
+      uses: clechasseur/rs-clippy-check@v3
     - name: rustfmt
       uses: mbrobbel/rustfmt-check@0.8.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         mode: review
-    - name: clippy
-      uses: clechasseur/rs-clippy-check@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
