@@ -6,8 +6,8 @@
 When I first subscribed to the _New York Times_ crossword in January 2017, I could solve some Monday
 puzzles and maybe the occasional Tuesday. Over time, I slowly got better at noticing the common
 patterns and picked up enough [crosswordese](https://en.wikipedia.org/wiki/Crosswordese) to be able
-to finish it fairly consistently. As of February 2021, I've now maintained a daily streak stretching
-back 3+ years to August 2017 (knock on wood...).
+to finish it fairly consistently. As of February 2024, I've now maintained a daily streak stretching
+back 6+ years to August 2017 (knock on wood...).
 
 The NYT crossword app exposes some solve time statistics like all-time average and fastest time,
 both broken out day. But there is no good way to see how much you have improved over time. You can
