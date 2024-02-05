@@ -122,7 +122,10 @@ impl RateLimitedClient {
         headers.insert(header::ACCEPT, "application/json".parse().unwrap());
         headers.insert(header::DNT, "1".parse().unwrap());
         if nyt_s.len() == 162 {
-            headers.insert(header::COOKIE, HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap());
+            headers.insert(
+                header::COOKIE,
+                HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap(),
+            );
         } else if nyt_s.len() == 142 {
             headers.insert("nyt-s", nyt_s.parse().unwrap());
         } else {
