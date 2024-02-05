@@ -121,7 +121,13 @@ impl RateLimitedClient {
         let mut headers = HeaderMap::new();
         headers.insert(header::ACCEPT, "application/json".parse().unwrap());
         headers.insert(header::DNT, "1".parse().unwrap());
-        headers.insert(header::COOKIE, HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap());
+        if nyt_s.len() == 162 {
+            headers.insert(header::COOKIE, HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap());
+        } else if nyt_s.len() == 142 {
+            headers.insert("nyt-s", nyt_s.parse().unwrap());
+        } else {
+            panic!("NYT-S must be either 162 characters (for NYT-S cookie) or 142 characters (for nyt-s header)");
+        }
 
         let client = reqwest::ClientBuilder::new()
             .user_agent("Scraping personal stats")
