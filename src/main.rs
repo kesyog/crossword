@@ -14,30 +14,29 @@
 
 use anyhow::Result;
 use chrono::{naive::NaiveDate, Duration};
+use clap::Parser;
 use core::num::NonZeroU32;
 use crossword::api_client::RateLimitedClient;
 use crossword::database::Database;
 use crossword::{logger, DAY_STEP};
 use indicatif::{ProgressBar, ProgressStyle};
 use log::warn;
-use std::convert::TryInto;
 use std::path::PathBuf;
-use structopt::StructOpt;
 use tokio::sync::mpsc;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct Opt {
     /// NYT subscription token extracted from web browser
-    #[structopt(short = "t", long = "token", env = "NYT_S")]
+    #[arg(short = 't', long = "token", env = "NYT_S")]
     nyt_token: String,
 
     /// Earliest puzzle date to pull results from in YYYY-MM-DD format
-    #[structopt(short, long, env = "NYT_XWORD_START")]
+    #[arg(short, long, env = "NYT_XWORD_START")]
     start_date: NaiveDate,
 
     /// Rate-limit (per second) for outgoing requests
-    #[structopt(
-        short = "q",
+    #[arg(
+        short = 'q',
         long = "quota",
         default_value = "5",
         env = "NYT_REQUESTS_PER_SEC"
@@ -54,7 +53,7 @@ struct Opt {
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
     pretty_env_logger::init();
-    let opt = Opt::from_args();
+    let opt = Opt::parse();
 
     let today = chrono::offset::Utc::now().date_naive();
     let stats_db = if opt.db_path.exists() {
@@ -76,6 +75,7 @@ async fn main() -> Result<()> {
     let progress = ProgressBar::new(total_days.try_into().unwrap()).with_style(
         ProgressStyle::default_bar()
             .template("▕{bar:40}▏{eta} {percent}% {msg}")
+            .unwrap()
             .progress_chars("⬛🔲⬜"),
     );
 

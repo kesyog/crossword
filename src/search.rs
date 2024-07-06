@@ -17,7 +17,6 @@ use crate::{logger, PuzzleStats};
 use anyhow::Result;
 use futures::future;
 use log::{debug, error, warn};
-use std::convert::TryInto;
 use tokio::sync::mpsc;
 
 pub async fn fetch_missing_times(

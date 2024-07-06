@@ -172,26 +172,26 @@ mod tests {
         let path = file.into_temp_path().to_path_buf();
         let mut db = Database::new(path);
         // Empty record
-        let empty_date = NaiveDate::from_ymd(2020, 1, 1);
+        let empty_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
         db.add(PuzzleStats::empty(empty_date));
         // Record with solve stats but without an id
-        let solved_no_id_date = NaiveDate::from_ymd(2020, 1, 2);
+        let solved_no_id_date = NaiveDate::from_ymd_opt(2020, 1, 2).unwrap();
         let mut solved_no_id =
             PuzzleStats::new(solved_no_id_date, 0, Some(SolvedPuzzleStats::default()));
         solved_no_id.puzzle_id = None;
         db.add(solved_no_id);
         // Record with solve stats and id
-        let solved_ided_date = NaiveDate::from_ymd(2020, 1, 3);
+        let solved_ided_date = NaiveDate::from_ymd_opt(2020, 1, 3).unwrap();
         db.add(PuzzleStats::new(
             solved_ided_date,
             20,
             Some(SolvedPuzzleStats::default()),
         ));
         // Record with no solve stats but with an id
-        let unsolved_ided_date = NaiveDate::from_ymd(2020, 1, 4);
+        let unsolved_ided_date = NaiveDate::from_ymd_opt(2020, 1, 4).unwrap();
         db.add(PuzzleStats::new(unsolved_ided_date, 100, None));
         // Record with cheated solve and with an id
-        let cheated_ided_date = NaiveDate::from_ymd(2020, 1, 8);
+        let cheated_ided_date = NaiveDate::from_ymd_opt(2020, 1, 8).unwrap();
         db.add(PuzzleStats::new(
             cheated_ided_date,
             400,
@@ -201,7 +201,7 @@ mod tests {
             }),
         ));
         // Record with cheated solve and no id
-        let cheated_unided_date = NaiveDate::from_ymd(2020, 1, 9);
+        let cheated_unided_date = NaiveDate::from_ymd_opt(2020, 1, 9).unwrap();
         let mut cheated_unided = PuzzleStats::new(
             cheated_unided_date,
             0,
@@ -213,8 +213,8 @@ mod tests {
         cheated_unided.puzzle_id = None;
         db.add(cheated_unided);
 
-        let start = NaiveDate::from_ymd(2020, 1, 1);
-        let end = NaiveDate::from_ymd(2020, 1, 11);
+        let start = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        let end = NaiveDate::from_ymd_opt(2020, 1, 11).unwrap();
 
         let chunks = get_days_without_ids_chunked(&db, start, end, Duration::days(5));
         assert!(
@@ -265,26 +265,26 @@ mod tests {
         let path = file.into_temp_path().to_path_buf();
         let mut db = Database::new(path);
         // Empty record
-        let empty_date = NaiveDate::from_ymd(2020, 1, 1);
+        let empty_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
         db.add(PuzzleStats::empty(empty_date));
         // Record with solve stats but without an id
-        let solved_no_id_date = NaiveDate::from_ymd(2020, 1, 2);
+        let solved_no_id_date = NaiveDate::from_ymd_opt(2020, 1, 2).unwrap();
         let mut solved_no_id =
             PuzzleStats::new(solved_no_id_date, 0, Some(SolvedPuzzleStats::default()));
         solved_no_id.puzzle_id = None;
         db.add(solved_no_id);
         // Record with solve stats and id
-        let solved_ided_date = NaiveDate::from_ymd(2020, 1, 3);
+        let solved_ided_date = NaiveDate::from_ymd_opt(2020, 1, 3).unwrap();
         db.add(PuzzleStats::new(
             solved_ided_date,
             20,
             Some(SolvedPuzzleStats::default()),
         ));
         // Record with no solve stats but with an id
-        let unsolved_ided_date = NaiveDate::from_ymd(2020, 1, 4);
+        let unsolved_ided_date = NaiveDate::from_ymd_opt(2020, 1, 4).unwrap();
         db.add(PuzzleStats::new(unsolved_ided_date, 100, None));
         // Record with cheated solve and with an id
-        let cheated_ided_date = NaiveDate::from_ymd(2020, 1, 8);
+        let cheated_ided_date = NaiveDate::from_ymd_opt(2020, 1, 8).unwrap();
         db.add(PuzzleStats::new(
             cheated_ided_date,
             400,
@@ -294,7 +294,7 @@ mod tests {
             }),
         ));
         // Record with cheated solve and no id
-        let cheated_unided_date = NaiveDate::from_ymd(2020, 1, 9);
+        let cheated_unided_date = NaiveDate::from_ymd_opt(2020, 1, 9).unwrap();
         let mut cheated_unided = PuzzleStats::new(
             cheated_unided_date,
             0,
@@ -306,16 +306,30 @@ mod tests {
         cheated_unided.puzzle_id = None;
         db.add(cheated_unided);
 
-        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 5)).is_empty());
-        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 8)).is_empty());
-        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 9)).is_empty());
-        assert!(get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 10)).is_empty());
+        assert!(
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 5).unwrap())
+                .is_empty()
+        );
+        assert!(
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 8).unwrap())
+                .is_empty()
+        );
+        assert!(
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 9).unwrap())
+                .is_empty()
+        );
+        assert!(
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 10).unwrap())
+                .is_empty()
+        );
 
-        let cached_unsolved = get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 4));
+        let cached_unsolved =
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 4).unwrap());
         assert!(cached_unsolved.len() == 1);
         assert!(contains_date(&cached_unsolved, unsolved_ided_date));
 
-        let cached_unsolved = get_cached_unsolved_records(&db, NaiveDate::from_ymd(2020, 1, 1));
+        let cached_unsolved =
+            get_cached_unsolved_records(&db, NaiveDate::from_ymd_opt(2020, 1, 1).unwrap());
         assert!(cached_unsolved.len() == 1);
         assert!(contains_date(&cached_unsolved, unsolved_ided_date));
 
