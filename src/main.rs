@@ -14,9 +14,9 @@
 
 use anyhow::Result;
 use chrono::{naive::NaiveDate, Duration};
-use clap::Parser;
+use clap::{Args, Parser};
 use core::num::NonZeroU32;
-use crossword::api_client::RateLimitedClient;
+use crossword::api_client::{RateLimitedClient, SubscriptionToken};
 use crossword::database::Database;
 use crossword::{logger, DAY_STEP};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -26,9 +26,8 @@ use tokio::sync::mpsc;
 
 #[derive(Debug, Parser)]
 struct Opt {
-    /// NYT subscription token extracted from web browser
-    #[arg(short = 't', long = "token", env = "NYT_S")]
-    nyt_token: String,
+    #[command(flatten)]
+    subscription_token: NytToken,
 
     /// Earliest puzzle date to pull results from in YYYY-MM-DD format
     #[arg(short, long, env = "NYT_XWORD_START")]
@@ -47,6 +46,18 @@ struct Opt {
     /// will be updated with missing data and the number of requests made will potentially be
     /// reduced.
     db_path: PathBuf,
+}
+
+/// NYT subscription token extracted from web browser
+#[derive(Args, Debug)]
+#[group(required = true, multiple = false)]
+struct NytToken {
+    /// NYT subscription token from nyt-s HTTP header
+    #[arg(long, env = "NYT_S_HEADER")]
+    nyt_header: Option<String>,
+    /// NYT subscription token from NYT-S cookie
+    #[arg(long, short = 't', env = "NYT_S_COOKIE")]
+    nyt_cookie: Option<String>,
 }
 
 #[tokio::main]
@@ -88,7 +99,14 @@ async fn main() -> Result<()> {
     let (tx, rx) = mpsc::unbounded_channel();
     let logger_handle = tokio::spawn(logger::task_fn(rx, stats_db, progress));
 
-    let client = RateLimitedClient::new(&opt.nyt_token, opt.request_quota);
+    let token = if let Some(header) = opt.subscription_token.nyt_header {
+        SubscriptionToken::Header(header)
+    } else if let Some(cookie) = opt.subscription_token.nyt_cookie {
+        SubscriptionToken::Cookie(cookie)
+    } else {
+        anyhow::bail!("No NYT subscription token provided");
+    };
+    let client = RateLimitedClient::new(token, opt.request_quota);
 
     let ids_task = tokio::spawn(crossword::search::fetch_ids_and_stats(
         client.clone(),

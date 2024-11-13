@@ -97,6 +97,15 @@ pub struct SolvedPuzzleStats {
     pub cheated: bool,
 }
 
+/// NYT subscription token
+#[derive(Debug, Clone)]
+pub enum SubscriptionToken {
+    /// Token extract from nyt-s HTTP header
+    Header(String),
+    /// Token extracted from NYT-S cookie
+    Cookie(String),
+}
+
 /// An HTTP client with a rate-limiting wrapper
 #[derive(Debug, Clone)]
 pub struct RateLimitedClient {
@@ -117,20 +126,17 @@ impl RateLimitedClient {
     ///
     /// * `nyt_s` - NYT subscription token extracted from web browser
     /// * `quota` - Outgoing request quota in requests per second
-    pub fn new(nyt_s: &str, quota: NonZeroU32) -> Self {
+    pub fn new(nyt_token: SubscriptionToken, quota: NonZeroU32) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert(header::ACCEPT, "application/json".parse().unwrap());
         headers.insert(header::DNT, "1".parse().unwrap());
-        if nyt_s.len() == 162 {
-            headers.insert(
+        match nyt_token {
+            SubscriptionToken::Cookie(cookie) => headers.insert(
                 header::COOKIE,
-                HeaderValue::from_str(&format!("NYT-S={}", nyt_s)).unwrap(),
-            );
-        } else if nyt_s.len() == 142 {
-            headers.insert("nyt-s", nyt_s.parse().unwrap());
-        } else {
-            panic!("NYT-S must be either 162 characters (for NYT-S cookie) or 142 characters (for nyt-s header)");
-        }
+                HeaderValue::from_str(&format!("NYT-S={}", cookie)).unwrap(),
+            ),
+            SubscriptionToken::Header(header) => headers.insert("nyt-s", header.parse().unwrap()),
+        };
 
         let client = reqwest::ClientBuilder::new()
             .user_agent("Scraping personal stats")
