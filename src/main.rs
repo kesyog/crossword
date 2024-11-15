@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::{naive::NaiveDate, Duration};
 use clap::{Args, Parser};
 use core::num::NonZeroU32;
@@ -68,8 +68,12 @@ async fn main() -> Result<()> {
 
     let today = chrono::offset::Utc::now().date_naive();
     let stats_db = if opt.db_path.exists() {
-        Database::from_file(opt.db_path)
-            .expect("Given file exists but does not contain a valid database")
+        Database::from_file(&opt.db_path).with_context(|| {
+            format!(
+                "Given file exists but does not contain a valid database: {}",
+                opt.db_path.display()
+            )
+        })?
     } else {
         Database::new(opt.db_path)
     };
@@ -83,10 +87,9 @@ async fn main() -> Result<()> {
     let cached_unsolved = crossword::get_cached_unsolved_records(&stats_db, opt.start_date);
 
     let total_days = missing_ids.iter().map(Vec::len).sum::<usize>() + cached_unsolved.len();
-    let progress = ProgressBar::new(total_days.try_into().unwrap()).with_style(
+    let progress = ProgressBar::new(total_days.try_into()?).with_style(
         ProgressStyle::default_bar()
-            .template("▕{bar:40}▏{eta} {percent}% {msg}")
-            .unwrap()
+            .template("▕{bar:40}▏{eta} {percent}% {msg}")?
             .progress_chars("⬛🔲⬜"),
     );
 

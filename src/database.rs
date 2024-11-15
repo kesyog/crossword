@@ -40,8 +40,8 @@ impl Database {
     /// Load a database from file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self> {
         let path = path.as_ref();
-        let file = File::open(path)
-            .with_context(|| format!("Failed to open {}", path.to_str().unwrap()))?;
+        let file =
+            File::open(path).with_context(|| format!("Failed to open {}", path.display()))?;
         let records = deserialize_records(file)?;
         Ok(Self {
             records,
