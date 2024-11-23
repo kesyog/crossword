@@ -21,21 +21,21 @@ Regularly-updating plot:
 
 Some observations:
 
-* The crossword clues _generally_ get harder over the course of the week, peaking in difficulty on
-Saturday, and the correlation with solve times shows up pretty clearly in the solve times.
-* The clues of Sunday puzzles are roughly at a Thursday or Friday difficulty level, but the grid is
-extra-large, so it's usually the slowest day.
-* Thursdays and Sundays usually have some sort of theme and/or trick, which usually added extra
-difficulty, especially early on when I wasn't as familiar with the usual patterns that constructors
-follow.
+- The crossword clues _generally_ get harder over the course of the week, peaking in difficulty on
+  Saturday, and the correlation with solve times shows up pretty clearly in the solve times.
+- The clues of Sunday puzzles are roughly at a Thursday or Friday difficulty level, but the grid is
+  extra-large, so it's usually the slowest day.
+- Thursdays and Sundays usually have some sort of theme and/or trick, which usually added extra
+  difficulty, especially early on when I wasn't as familiar with the usual patterns that constructors
+  follow.
 
 Caveats:
 
-* I didn't count any puzzles that I didn't finish or that I used the "check" or "reveal" assists on,
-so there's some survivorship bias. Again, this only affects the early data, as I've since stopped
-using those features.
-* I generally solve puzzles on my phone, but every now and then I'll solve them on my computer,
-which shaves some time off. This is just another source of noise.
+- I didn't count any puzzles that I didn't finish or that I used the "check" or "reveal" assists on,
+  so there's some survivorship bias. Again, this only affects the early data, as I've since stopped
+  using those features.
+- I generally solve puzzles on my phone, but every now and then I'll solve them on my computer,
+  which shaves some time off. This is just another source of noise.
 
 ## Scraping the data
 
@@ -65,10 +65,10 @@ default or not, I'm not responsible for anything that happens to your account.
 ### Design goals
 
 1. Reduce requests made to NYT's servers. If provided, data from previous runs is loaded and used to
-avoid re-requesting information pulled from previous runs.
+   avoid re-requesting information pulled from previous runs.
 1. Reduce load on NYT's servers. Requests made to the server are rate-limited.
 1. Maximum concurrency. Requests are made as concurrently as possible given the other two
-constraints thanks to async/await. It's totally overkill with the default amount of rate-limiting 🤷🏽‍♂
+   constraints thanks to async/await. It's totally overkill with the default amount of rate-limiting 🤷🏽‍♂
 
 ### Extracting your subscription token
 
@@ -79,9 +79,9 @@ browsers' developer tools.
 1. Open the Network tab
 1. Navigate to <https://www.nytimes.com/crosswords>
 1. Look for a request for some kind of json file e.g. `progress.json`, `mini-stats.json`, or
-`stats-and-streaks.json`.
+   `stats-and-streaks.json`.
 1. In the headers pane, find the list of cookies, and fine `NYT-S` in that string. That is your
-token. If you can't find the `NYT-S` cookie in the request, try a different json file.
+   token. If you can't find the `NYT-S` cookie in the request, try a different json file.
 
 ### Under the hood
 
@@ -93,35 +93,35 @@ HTTP traffic while browsing the crossword webpage.
 Some details if you want to bypass the script and replicate the functionality yourself:
 
 1. Each puzzle is assigned a numerical id. Before we can fetch the stats for a given puzzle, we need
-to know that id. To find it, send a GET request as below, specifying `{start_date}` and `{end_date}`
-in YYYY-MM-DD format ([ISO 8601](https://xkcd.com/1179)). The server response is limited to 100
-puzzles and can be limited further by adding a `limit` parameter.
+   to know that id. To find it, send a GET request as below, specifying `{start_date}` and `{end_date}`
+   in YYYY-MM-DD format ([ISO 8601](https://xkcd.com/1179)). The server response is limited to 100
+   puzzles and can be limited further by adding a `limit` parameter.
 
-    ```sh
-    curl 'https://www.nytimes.com/svc/crosswords/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
-    ```
+   ```sh
+   curl 'https://www.nytimes.com/svc/crosswords/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
+   ```
 
 1. To fetch solve stats for a given puzzle, send a GET request as below, replacing `{id}` with the
-puzzle id. This API requires a NYT crossword subscription. `{subscription_header}` can be found by
-snooping on outgoing HTTP requests via Chrome/Firefox developer tools while opening a NYT crossword
-in your browser. Alternatively, you can supposedly extract your session cookie from your browser and
-send that instead (see linked reddit post below), but I haven't tried it myself.
-  
-    ```sh
-    curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' --cookie 'NYT-S={subscription_header}'
-    ```
+   puzzle id. This API requires a NYT crossword subscription. `{subscription_header}` can be found by
+   snooping on outgoing HTTP requests via Chrome/Firefox developer tools while opening a NYT crossword
+   in your browser. Alternatively, you can supposedly extract your session cookie from your browser and
+   send that instead (see linked reddit post below), but I haven't tried it myself.
+
+   ```sh
+   curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' --cookie 'NYT-S={subscription_header}'
+   ```
 
 1. Check out the `calcs` and `firsts` field of this response to get information like solve duration,
-when the puzzle was solved, and whether any assists were used.
+   when the puzzle was solved, and whether any assists were used.
 
 1. Rinse and repeat, collecting data for the dates of interest.
 
 ## Plotting the data
 
-Use your favorite tools to analyze and plot the raw data stored in the CSV file. The
-Python-pandas-matplotlib trifecta works great.
+Use your favorite tools to analyze and plot the raw data stored in the CSV file.
 
-My plots are generated via the Python script in the [plot](./plot) folder. To use it, run the following:
+My plots are generated via the Python script in the [plot](./plot) folder. To use it, run the
+following:
 
 ```sh
 # Install prerequisites
@@ -137,13 +137,13 @@ The output path can be an SVG or PNG file.
 
 The plot above is auto-generated by a regularly-scheduled job running on the Google Cloud Platform.
 
-[cloud\_run.py](./cloud_run.py) implements a Flask server that glues together the stats fetching and
+[cloud_run.py](./cloud_run.py) implements a Flask server that glues together the stats fetching and
 plotting scripts, and the whole thing is containerized and run via Google Cloud Run.
 
 ## References
 
-* [Relevant Reddit post][1]: for figuring out how to find the right APIs to hit
-* [Rex Parker does the NY Times crossword][2]: grumpy old man
+- [Relevant Reddit post][1]: for figuring out how to find the right APIs to hit
+- [Rex Parker does the NY Times crossword][2]: grumpy old man
 
 ## Disclaimer
 
