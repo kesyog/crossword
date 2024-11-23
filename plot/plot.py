@@ -21,24 +21,53 @@ import os
 import pandas as pd
 import seaborn as sns
 
+# Rolling average filter interval for plot
+FILTER_INTERVAL_WEEKS = 26
+DEFAULT_PLOT_STYLE = "ggplot"
 
-DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-YEAR_TO_SPLIT = datetime.datetime.now().year - 1
+# Mapping of days as outputted in Rust crate to how each day should be formatted in the plot legend
+DAYS = {
+    "Mon": "Monday",
+    "Tue": "Tuesday",
+    "Wed": "Wednesday",
+    "Thu": "Thursday",
+    "Fri": "Friday",
+    "Sat": "Saturday",
+    "Sun": "Sunday",
+}
 
 A = argparse.ArgumentParser(
-    description='Generates plots of crossword statistics from a CSV',
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    description="Generates plots of crossword statistics from a CSV"
 )
-A.add_argument('in_file', action='store', type=str,
-    help="The path to a CSV file generated from the crossword crate")
-A.add_argument('out_file', action='store', type=str,
-    help="The output path where plots should be saved (e.g. trends.png)")
-A.add_argument('-c', '--ceiling', action='store', type=int, default=None,
-    help='Max Y Value in minutes; use 0 to compute from data.')
-A.add_argument('-s', '--style', action='store', default="Solarize_Light2",
-    type=str,  # choices=plt.style.available,  # looks gross
-    help='Name of the plot style to use; must be in plt.style.available')
+A.add_argument(
+    "in_file",
+    action="store",
+    type=str,
+    help="The path to a CSV file generated from the crossword crate",
+)
+A.add_argument(
+    "out_file",
+    action="store",
+    type=str,
+    help="The output path where plots should be saved (e.g. trends.png)",
+)
+A.add_argument(
+    "-c",
+    "--ceiling",
+    action="store",
+    type=int,
+    default=None,
+    help="Max Y Value in minutes",
+)
+A.add_argument(
+    "-s",
+    "--style",
+    action="store",
+    default=DEFAULT_PLOT_STYLE,
+    type=str,
+    choices=plt.style.available,
+    help="Name of the plot style to use; must be in plt.style.available",
+)
 
 
 def parse_data(csv_path):
@@ -76,15 +105,21 @@ def parse_data(csv_path):
 def save_plot(df, out_path, ymax):
     fig = plt.figure(figsize=(10, 7), dpi=200)
     today = datetime.date.today().isoformat()
-    latest_solve = df['date'].sort_values()[-1].date().isoformat()
+    latest_solve = df["date"].sort_values().iat[-1].date().isoformat()
     plt.title(
-        f"NYT crossword solve time (8-week rolling average) as of {today}"
+        f"NYT crossword solve time ({FILTER_INTERVAL_WEEKS}-week rolling average) as of {today}"
     )
     ax = fig.gca()
-    for day in DAYS:
-        rolling_avg = df[df["weekday"] == day]["solve_time_secs"].rolling("56D").mean()
+    for day_data, day_legend in DAYS.items():
+        rolling_avg = (
+            df[df["weekday"] == day_data]["solve_time_secs"]
+            .rolling(f"{FILTER_INTERVAL_WEEKS * 7}D")
+            .mean()
+        )
         (rolling_avg / 60.0).plot(
-            ax=ax, label=day, linewidth=2, markersize=20, marker=",", linestyle="-"
+            ax=ax,
+            label=day_legend,
+            linewidth=2,
         )
     plt.legend()
 
@@ -93,72 +128,18 @@ def save_plot(df, out_path, ymax):
     minor_yticks = np.arange(0, ymax + 1, 5)
     ax.set_ylim(0, ymax)
     ax.set_yticks(minor_yticks, minor=True)
+    # Show y-axis labels on the right of the plot as well 
+    ax_right = ax.secondary_yaxis('right')
+    ax_right.set_yticks(ax.get_yticks())
 
     plt.xticks(rotation=0)
 
     plt.grid(True, which="both", axis="both")
+    plt.tight_layout()
     plt.savefig(out_path)
 
 
-def save_vln_plot(df, out_path, ymax):
-    """
-        Makes a violin plot of the daily time distributions.
-
-        df: dataframe containing crossword times
-        out_path: filename to save plot to
-        ceiling: max y-value to show
-    """
-    df['solve_time_m'] = df['solve_time_secs'] / 60.0
-    ax = sns.violinplot(x="weekday", y="solve_time_m", data=df, order=DAYS)
-
-    date = max(df['Solved datetime']).strftime("%b %d, %Y")
-    ax.set_title("%d NYT Crossword Solve Times by Day of Week as of %s" % (len(df), date))
-    ax.set_xlabel("Day of Week")
-    ax.set_ylabel("Minutes to Solve")
-
-    ax.set_ylim(0, ymax + 5)
-    ax.set_yticks(np.arange(0, ymax, 5))
-
-    ax.get_legend().remove()
-    plt.savefig(out_path)
-    plt.close()
-
-
-def save_split_vln_plot(df, out_path, ymax):
-    """
-        Splits the violin plot into pre- and post- YEAR_TO_SPLIT sections to look
-        at progress over time.
-
-        df: dataframe containing crossword times
-        out_path: filename to save plot to
-        ceiling: max y-value to show
-    """
-    df['solve_time_m'] = df['solve_time_secs'] / 60.0
-    df[f'In {YEAR_TO_SPLIT}'] = df['Solved datetime'] > datetime.datetime(YEAR_TO_SPLIT, 1, 1)
-    try:
-        ax = sns.violinplot(x="weekday", y="solve_time_m", hue=f'In {YEAR_TO_SPLIT}',
-                            split=True, data=df, bw=.25, order=DAYS)
-    except:
-        # Happens if there is no data from last year
-        return
-
-    date = max(df['Solved datetime']).strftime("%b %d, %Y")
-    ax.set_title("%d NYT Crossword Solve Times by Day of Week as of %s" % (len(df), date))
-    ax.set_xlabel("Day of Week")
-    ax.set_ylabel("Minutes to Solve")
-
-    ax.set_ylim(0, ymax + 5)
-    ax.set_yticks(np.arange(0, ymax, 5))
-
-    ax.legend()  # Seems to have the effect of removing the title of the legend
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, [f"Before {YEAR_TO_SPLIT}", f"{YEAR_TO_SPLIT}+"], loc="upper left")
-
-    plt.savefig(out_path)
-    plt.close()
-
-
-def generate(in_file, out_file, ceiling = None):
+def generate(in_file, out_file, ceiling=None, style=DEFAULT_PLOT_STYLE):
     df = parse_data(in_file)
 
     if ceiling is None:
@@ -167,23 +148,15 @@ def generate(in_file, out_file, ceiling = None):
     else:
         ymax = ceiling
 
+    if style is not None:
+        plt.style.use(style)
     save_plot(df, out_file, ymax)
-
-    out_name = "%s Violin Plot%s" % os.path.splitext(out_file)
-    save_vln_plot(df, out_name, ymax)
-
-    out_name = "%s Split Violin Plot%s" % os.path.splitext(out_file)
-    save_split_vln_plot(df, out_name, ymax)
-
-    # TODO: a ridge plot may be fun to try too:
-    # https://seaborn.pydata.org/examples/kde_ridgeplot.html
 
 
 def main():
     args = A.parse_args()
 
-    plt.style.use(args.style)
-    generate(args.in_file, args.out_file, args.ceiling)
+    generate(args.in_file, args.out_file, args.ceiling, args.style)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ COPY Cargo* ./
 COPY src/ ./src
 RUN cargo install --path .
 
-FROM python:3.9-slim
+FROM python:3.11-slim
 COPY --from=builder /usr/local/cargo/bin/crossword /usr/local/bin/crossword
 
 # Install Python dependencies

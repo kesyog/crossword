@@ -58,7 +58,7 @@ def upload_plot(bucket):
 
 
 def generate_plot():
-    plot.generate(LOCAL_CSV_FILENAME, LOCAL_PLOT_FILENAME)
+    plot.generate(LOCAL_CSV_FILENAME, LOCAL_PLOT_FILENAME, style="seaborn-v0_8-darkgrid")
 
 
 def update_csv():
