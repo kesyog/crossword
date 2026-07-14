@@ -93,10 +93,7 @@ async fn main() -> Result<()> {
             .progress_chars("⬛🔲⬜"),
     );
 
-    let msg = format!(
-        "Fetching NYT crossword stats since {}",
-        &opt.start_date.to_string()
-    );
+    let msg = format!("Fetching NYT crossword stats since {}", opt.start_date);
     progress.println(msg);
 
     let (tx, rx) = mpsc::unbounded_channel();

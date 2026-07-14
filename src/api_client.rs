@@ -14,6 +14,7 @@
 
 use anyhow::Result;
 use chrono::naive::NaiveDate;
+use chrono::DateTime;
 use core::num::NonZeroU32;
 use governor::clock::DefaultClock;
 use governor::state::direct::NotKeyed;
@@ -40,53 +41,56 @@ struct PuzzleMetadata {
     // other fields don't contain accurate solve data. don't trust them.
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct PuzzleStatsResponse {
-    calcs: RawStats,
-    firsts: Option<RawFirsts>,
+    states: Vec<PuzzleState>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PuzzleState {
+    puzzle_id: String,
+    game_data: GameData,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GameData {
+    play_time_seconds: Option<u32>,
+    first_solve_date: Option<String>,
+    first_solve_used_aid: Option<bool>,
+    revealed: Option<Vec<u32>>,
+    checked: Option<Vec<u32>>,
 }
 
 impl PuzzleStatsResponse {
-    fn collect_stats(&self) -> Option<SolvedPuzzleStats> {
+    fn collect_stats(&self, requested_id: u32) -> Option<SolvedPuzzleStats> {
+        let requested_id_str = requested_id.to_string();
+        let state = self
+            .states
+            .iter()
+            .find(|s| s.puzzle_id == requested_id_str)?;
+        let game_data = &state.game_data;
+
+        let solve_date_str = game_data.first_solve_date.as_deref()?;
         let mut stats = SolvedPuzzleStats::default();
 
-        if let Some(firsts) = self.firsts {
-            stats.opened = firsts.opened;
-            stats.solved = firsts.solved;
-            match (firsts.checked, firsts.revealed) {
-                (None, None) => (),
-                _ => stats.cheated = true,
-            }
-        }
+        let Ok(datetime) = DateTime::parse_from_rfc3339(solve_date_str) else {
+            error!("Failed to parse first_solve_date: {}", solve_date_str);
+            return None;
+        };
+        stats.solved = Some(datetime.timestamp() as u32);
+        stats.solve_time = game_data.play_time_seconds.unwrap_or(0);
 
-        if let Some(true) = self.calcs.solved {
-            stats.solve_time = if let Some(solve_time) = self.calcs.seconds_spent_solving {
-                solve_time
-            } else {
-                error!("Response for solved puzzle did not contain solve time");
-                return None;
-            };
-            Some(stats)
-        } else {
-            None
-        }
+        let cheated_by_aid = game_data.first_solve_used_aid.unwrap_or(false);
+        let cheated_by_reveal = game_data.revealed.as_ref().is_some_and(|r| !r.is_empty());
+        let cheated_by_check = game_data.checked.as_ref().is_some_and(|c| !c.is_empty());
+
+        stats.cheated = cheated_by_aid || cheated_by_reveal || cheated_by_check;
+        // Not available in new API
+        stats.opened = None;
+
+        Some(stats)
     }
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RawStats {
-    solved: Option<bool>,
-    seconds_spent_solving: Option<u32>,
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RawFirsts {
-    opened: Option<u32>,
-    checked: Option<u32>,
-    revealed: Option<u32>,
-    solved: Option<u32>,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Default)]
@@ -115,10 +119,11 @@ pub struct RateLimitedClient {
 }
 
 impl RateLimitedClient {
-    const API_BASE: &'static str = "https://www.nytimes.com/svc/crosswords";
+    const API_BASE: &'static str = "https://www.nytimes.com/svc";
     const PUZZLE_INFO_ENDPOINT: &'static str =
-        "/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}";
-    const PUZZLE_STATS_ENDPOINT: &'static str = "/v6/game/{id}.json";
+        "/crosswords/v3/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}";
+    const PUZZLE_STATS_ENDPOINT: &'static str =
+        "/games/state/crossword_daily/latests?puzzle_ids={id}";
 
     /// Construct a new `RateLimitedClient`
     ///
@@ -205,5 +210,5 @@ pub async fn get_solve_stats(
     let endpoint = RateLimitedClient::PUZZLE_STATS_ENDPOINT.replace("{id}", &puzzle_id.to_string());
     let url = RateLimitedClient::api_url(&endpoint);
     let response: PuzzleStatsResponse = client.get(&url).await?.json().await?;
-    Ok(response.collect_stats())
+    Ok(response.collect_stats(puzzle_id))
 }
