@@ -47,7 +47,7 @@ and then run the following to generate a CSV file containing the data:
 $ cargo run --release -- --help
 
 # Example usage starting search from the crossword on January 1, 2016 onward
-# Subsequent program runs will use existing file as a cache 
+# Subsequent program runs will use existing file as a cache
 $ cargo run --release -- -t <your NYT token> -s 2016-01-01 data.csv
 
 # Example usage with increased quota to set rate-limit to 10 requests/second
@@ -98,7 +98,7 @@ Some details if you want to bypass the script and replicate the functionality yo
    puzzles and can be limited further by adding a `limit` parameter.
 
    ```sh
-   curl 'https://www.nytimes.com/svc/crosswords/v3/36569100/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
+   curl 'https://www.nytimes.com/svc/crosswords/v3/puzzles.json?publish_type=daily&date_start={start_date}&date_end={end_date}' -H 'accept: application/json'
    ```
 
 1. To fetch solve stats for a given puzzle, send a GET request as below, replacing `{id}` with the
@@ -108,10 +108,10 @@ Some details if you want to bypass the script and replicate the functionality yo
    send that instead (see linked reddit post below), but I haven't tried it myself.
 
    ```sh
-   curl 'https://www.nytimes.com/svc/crosswords/v6/game/{id}.json' -H 'accept: application/json' --cookie 'NYT-S={subscription_header}'
+   curl 'https://www.nytimes.com/svc/games/state/crossword_daily/latests?puzzle_ids={id}' -H 'accept: application/json' --cookie 'NYT-S={subscription_header}'
    ```
 
-1. Check out the `calcs` and `firsts` field of this response to get information like solve duration,
+1. Check out the `states` and `game_data` fields of this response to get information like solve duration,
    when the puzzle was solved, and whether any assists were used.
 
 1. Rinse and repeat, collecting data for the dates of interest.

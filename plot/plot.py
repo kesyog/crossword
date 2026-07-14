@@ -89,12 +89,13 @@ def parse_data(csv_path):
     df.index = df["Solved datetime"]
     df = df.sort_index()
     # Filter out:
-    # * Puzzles that were solved more than 7 days after first open. These puzzles were revisited
-    # much later, making it hard to make accurate conclusions about the solve time.
+    # * Puzzles that were solved more than 7 days after first open, if the open time is known.
+    #   These puzzles were revisited much later, making it hard to make accurate conclusions about
+    #   the solve time.
     # * Unsolved puzzles
     # * Puzzles where cheats were used
     df = df[
-        (df["solved_unix"] - df["opened_unix"] < 3600 * 24 * 7)
+        (df["solved_unix"] - df["opened_unix"].fillna(df["solved_unix"]) < 3600 * 24 * 7)
         & (df["cheated"] == False)
         & df.solve_time_secs.notnull()
     ]
@@ -128,7 +129,7 @@ def save_plot(df, out_path, ymax):
     minor_yticks = np.arange(0, ymax + 1, 5)
     ax.set_ylim(0, ymax)
     ax.set_yticks(minor_yticks, minor=True)
-    # Show y-axis labels on the right of the plot as well 
+    # Show y-axis labels on the right of the plot as well
     ax_right = ax.secondary_yaxis('right')
     ax_right.set_yticks(ax.get_yticks())
 
